@@ -1,0 +1,315 @@
+/* Task Card Component Styles */
+
+.task-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  margin-bottom: 0.75rem;
+}
+
+.task-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-color: var(--primary-color);
+  transform: translateY(-1px);
+}
+
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Status Badge */
+.task-status {
+  flex-shrink: 0;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.status-todo {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.status-in-progress {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-done {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-cancelled {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-archived {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+/* Task Content */
+.task-content {
+  flex: 1;
+  min-width: 200px;
+}
+
+.task-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.task-description {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0.25rem 0 0 0;
+  line-height: 1.5;
+}
+
+/* Tags */
+.task-tags {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tag {
+  display: inline-block;
+  padding: 0.25rem 0.625rem;
+  background: var(--tag-bg, #f3f4f6);
+  color: var(--tag-color, #6b7280);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Dates */
+.task-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  min-width: 140px;
+}
+
+.date-item {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.date-label {
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+.date-value {
+  color: var(--text-secondary);
+}
+
+/* Deadline specific styles */
+.deadline-item {
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  background: var(--card-bg);
+  border: 1px solid transparent;
+}
+
+.deadline-item.deadline-normal {
+  border-color: #e5e7eb;
+}
+
+.deadline-item.deadline-soon {
+  background: #fef3c7;
+  border-color: #fbbf24;
+}
+
+.deadline-item.deadline-today {
+  background: #dbeafe;
+  border-color: #3b82f6;
+}
+
+.deadline-item.deadline-overdue {
+  background: #fee2e2;
+  border-color: #ef4444;
+}
+
+.deadline-badge {
+  font-size: 0.625rem;
+  font-weight: 700;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.deadline-item.deadline-soon .date-label,
+.deadline-item.deadline-soon .date-value {
+  color: #92400e;
+}
+
+.deadline-item.deadline-today .date-label,
+.deadline-item.deadline-today .date-value {
+  color: #1e40af;
+}
+
+.deadline-item.deadline-overdue .date-label,
+.deadline-item.deadline-overdue .date-value {
+  color: #991b1b;
+}
+
+/* Actions */
+.task-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.action-btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+  background: var(--hover-bg);
+  border-color: var(--primary-color);
+}
+
+.edit-btn:hover {
+  color: var(--primary-color);
+}
+
+.delete-btn:hover {
+  color: #dc2626;
+  border-color: #dc2626;
+}
+
+.action-btn svg {
+  pointer-events: none;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .task-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .task-content {
+    width: 100%;
+  }
+
+  .task-dates {
+    width: 100%;
+  }
+
+  .task-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 480px) {
+  .task-card {
+    padding: 0.75rem;
+  }
+
+  .task-title {
+    font-size: 0.9375rem;
+  }
+
+  .date-item {
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .task-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .status-todo {
+    background: #312e81;
+    color: #c7d2fe;
+  }
+
+  .status-in-progress {
+    background: #78350f;
+    color: #fef3c7;
+  }
+
+  .status-done {
+    background: #064e3b;
+    color: #a7f3d0;
+  }
+
+  .status-cancelled {
+    background: #7f1d1d;
+    color: #fecaca;
+  }
+
+  .status-archived {
+    background: #374151;
+    color: #d1d5db;
+  }
+
+  /* Deadline dark mode */
+  .deadline-item.deadline-soon {
+    background: #78350f;
+    border-color: #f59e0b;
+  }
+
+  .deadline-item.deadline-soon .date-label,
+  .deadline-item.deadline-soon .date-value {
+    color: #fbbf24;
+  }
+
+  .deadline-item.deadline-today {
+    background: #1e3a8a;
+    border-color: #60a5fa;
+  }
+
+  .deadline-item.deadline-today .date-label,
+  .deadline-item.deadline-today .date-value {
+    color: #93c5fd;
+  }
+
+  .deadline-item.deadline-overdue {
+    background: #7f1d1d;
+    border-color: #f87171;
+  }
+
+  .deadline-item.deadline-overdue .date-label,
+  .deadline-item.deadline-overdue .date-value {
+    color: #fca5a5;
+  }
+}

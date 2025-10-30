@@ -14,7 +14,7 @@ const router = createRouter({
       component: () => import('../views/DayTasks.vue')
     },
     {
-      path: '/research',
+      path: '/research/:query',
       name: 'research',
       component: () => import('../views/Research.vue')
     },

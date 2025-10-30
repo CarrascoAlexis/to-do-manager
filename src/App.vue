@@ -11,44 +11,4 @@ import Sidebar from './components/Sidebar.vue'
   </div>
 </template>
 
-<style scoped>
-.app-container {
-  display: flex;
-  min-height: 100vh;
-  background: var(--bg-color);
-  color: var(--text-color);
-}
-
-.main-content {
-  flex: 1;
-  margin-left: 240px;
-  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow-x: hidden;
-  width: 100%;
-}
-
-
-
-/* Responsive - Mobile */
-@media (max-width: 768px) {
-  .main-content {
-    margin-left: 0;
-    padding-top: 4rem; /* Space for floating toggle button */
-  }
-}
-
-/* Tablet */
-@media (min-width: 769px) and (max-width: 1024px) {
-  .main-content {
-    margin-left: 64px;
-  }
-}
-
-/* Dark mode */
-@media (prefers-color-scheme: dark) {
-  .app-container {
-    /* variables handle dark mode; keep this as a fallback */
-    background: var(--bg-color);
-  }
-}
-</style>
+<style src="./styles/app.css" scoped></style>

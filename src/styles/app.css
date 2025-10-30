@@ -1,17 +1,4 @@
-<script setup lang="ts">
-import Sidebar from './components/Sidebar.vue'
-</script>
-
-<template>
-  <div class="app-container">
-    <Sidebar />
-    <main class="main-content">
-      <router-view />
-    </main>
-  </div>
-</template>
-
-<style scoped>
+/* App-level styles (moved from App.vue) */
 .app-container {
   display: flex;
   min-height: 100vh;
@@ -27,8 +14,6 @@ import Sidebar from './components/Sidebar.vue'
   width: 100%;
 }
 
-
-
 /* Responsive - Mobile */
 @media (max-width: 768px) {
   .main-content {
@@ -39,16 +24,10 @@ import Sidebar from './components/Sidebar.vue'
 
 /* Tablet */
 @media (min-width: 769px) and (max-width: 1024px) {
-  .main-content {
-    margin-left: 64px;
-  }
+  .main-content { margin-left: 64px; }
 }
 
-/* Dark mode */
+/* Dark mode fallback (variables handle colors) */
 @media (prefers-color-scheme: dark) {
-  .app-container {
-    /* variables handle dark mode; keep this as a fallback */
-    background: var(--bg-color);
-  }
+  .app-container { background: var(--bg-color); }
 }
-</style>

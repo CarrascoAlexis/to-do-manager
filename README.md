@@ -1,42 +1,185 @@
-# to-do-manager
+# 📋 To-Do Manager
 
-This template should help get you started developing with Vue 3 in Vite.
+A modern, responsive task management application built with Vue 3, TypeScript, and Vite. This application provides a comprehensive solution for organizing and tracking tasks with features like status filtering, deadline management, and multiple theme support.
 
-## Recommended IDE Setup
+## 📖 Description
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+To-Do Manager is a full-featured task management application designed to help users organize their daily activities efficiently. The application offers an intuitive interface with a sidebar navigation system, allowing users to view tasks from different perspectives:
 
-## Recommended Browser Setup
+- **Home**: View all tasks with customizable status filters
+- **Day Tasks**: Focus on tasks due today
+- **Research**: Search and find tasks across your entire collection
+- **Archived**: Access completed and archived tasks
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd) 
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+Key features include:
+- ✅ Create, edit, and delete tasks
+- 📅 Set and track task deadlines with visual urgency indicators
+- 🏷️ Organize tasks with tags (Work, Personal, Urgent, Low Priority)
+- 🔍 Filter tasks by status (To Do, In Progress, Done, Cancelled)
+- 🎨 8 beautiful themes (Light, Dark, Halloween, Christmas, France, Italy, Spain, LGBT)
+- 📱 Fully responsive design for mobile, tablet, and desktop
+- 💾 Persistent storage using browser localStorage
+- 🌙 Dark mode support
 
-## Type Support for `.vue` Imports in TS
+## 🛠️ Technologies Used
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+### Core Framework & Build Tools
+- **Vue 3.5.22** - Progressive JavaScript framework with Composition API
+- **TypeScript 5.9.0** - Typed superset of JavaScript for improved code quality
+- **Vite 7.1.11** - Next-generation frontend build tool for fast development
 
-## Customize configuration
+### Development Tools
+- **vue-tsc 2.2.0** - TypeScript type checking for Vue components
+- **vue-router 4.6.3** - Official router for Vue.js single-page applications
+- **@vitejs/plugin-vue 5.2.1** - Official Vite plugin for Vue 3 support
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+### Code Quality
+- **ESLint 9.17.0** - JavaScript and TypeScript linting
+- **@vue/tsconfig** - Shared TypeScript configuration for Vue projects
 
-## Project Setup
+### Styling
+- **CSS Variables** - Dynamic theming system
+- **Modular CSS** - Organized stylesheets for maintainability
+- **Responsive Design** - Mobile-first approach with media queries
 
-```sh
-npm install
-```
+## 🚀 Project Initialization
 
-### Compile and Hot-Reload for Development
+### Prerequisites
+- **Node.js** (version 16.x or higher)
+- **npm** (version 7.x or higher) or **yarn**
 
-```sh
+### Installation Steps
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/CarrascoAlexis/to-do-manager.git
+   cd to-do-manager
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Verify installation**
+   ```bash
+   npm run type-check
+   ```
+
+## 🎯 Launching the Project
+
+### Development Mode
+
+Start the development server with hot-reload:
+
+```bash
 npm run dev
 ```
 
-### Type-Check, Compile and Minify for Production
+The application will be available at `http://localhost:5173/` (or another port if 5173 is occupied).
 
-```sh
+### Production Build
+
+Build the application for production:
+
+```bash
 npm run build
 ```
+
+The optimized files will be generated in the `dist/` directory.
+
+### Preview Production Build
+
+Preview the production build locally:
+
+```bash
+npm run preview
+```
+
+### Type Checking
+
+Run TypeScript type checking without building:
+
+```bash
+npm run type-check
+```
+
+## 📁 Project Structure
+
+```
+to-do-manager/
+├── public/              # Static assets
+│   └── favicon.ico
+├── src/
+│   ├── components/      # Reusable Vue components
+│   │   ├── Sidebar.vue
+│   │   ├── TaskCard.vue
+│   │   └── TaskModal.vue
+│   ├── views/          # Page components
+│   │   ├── Home.vue
+│   │   ├── DayTasks.vue
+│   │   ├── Research.vue
+│   │   └── Archived.vue
+│   ├── router/         # Vue Router configuration
+│   │   └── index.ts
+│   ├── resources/      # Data models and utilities
+│   │   └── tasks.ts
+│   ├── styles/         # Global and component styles
+│   │   ├── global.css
+│   │   ├── themes.css
+│   │   ├── app.css
+│   │   ├── sidebar.css
+│   │   ├── views.css
+│   │   ├── task-card.css
+│   │   └── task-modal.css
+│   ├── App.vue         # Root component
+│   └── main.ts         # Application entry point
+├── index.html          # HTML entry point
+├── package.json        # Project dependencies
+├── tsconfig.json       # TypeScript configuration
+├── vite.config.ts      # Vite configuration
+└── README.md           # Project documentation
+```
+
+## 🎨 Features
+
+### Task Management
+- **CRUD Operations**: Create, read, update, and delete tasks
+- **Status Tracking**: To Do, In Progress, Done, Cancelled, Archived
+- **Deadline Management**: Set deadlines with visual urgency indicators
+- **Tag System**: Categorize tasks with multiple tags
+
+### User Interface
+- **Responsive Design**: Optimized for all screen sizes
+- **Theme System**: 8 beautiful themes to choose from
+- **Modal Views**: Detailed task information in elegant modals
+- **Filter System**: Filter tasks by status on the Home page
+- **Search Functionality**: Find tasks quickly in the Research view
+
+### Data Persistence
+- **localStorage**: Tasks are automatically saved to browser storage
+- **Import/Export**: Demo data script for testing
+
+## 🧪 Testing the Application
+
+1. **Load Demo Data**: Open the browser console and paste the content of `demo-data.js`
+2. **Explore Features**:
+   - Navigate between different views using the sidebar
+   - Click on task cards to view details in a modal
+   - Use filter buttons on the Home page
+   - Try different themes from the sidebar
+   - Test responsive design by resizing the browser window
+
+## 👨‍💻 Author
+
+**Alexis Carrasco**
+- GitHub: [@CarrascoAlexis](https://github.com/CarrascoAlexis)
+- Project: [to-do-manager](https://github.com/CarrascoAlexis/to-do-manager)
+
+## 📄 License
+
+This project is available for educational and personal use.
+
+## 🙏 Acknowledgments
+
+Built with modern web technologies and best practices for Vue 3 development. Special thanks to the Vue.js and Vite communities for their excellent documentation and tools.

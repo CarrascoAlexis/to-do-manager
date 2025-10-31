@@ -7,6 +7,11 @@ interface Props {
   isOpen: boolean
 }
 
+interface Props {
+  task: Task | null
+  isOpen: boolean
+}
+
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
@@ -157,6 +162,60 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('click', onDocClick)
 })
+
+// Local edit mode
+const editing = ref(false)
+const edited = ref<any>(null)
+
+// If the parent requests to open the modal already in edit mode, start editing when opened
+// (watch is imported earlier)
+
+
+
+function startEdit() {
+  if (!props.task) return
+  editing.value = true
+  // shallow copy and convert dates to ISO date string for inputs
+  edited.value = {
+    ...props.task,
+    // convert deadline to yyyy-mm-dd string for date input
+    deadline: props.task.deadline ? (props.task.deadline as Date).toISOString().slice(0,10) : undefined
+  }
+}
+
+function cancelEdit() {
+  editing.value = false
+  edited.value = null
+}
+
+function saveEdit() {
+  if (!props.task || !edited.value) return
+  // construct updated task
+  const updated: Task = {
+    ...props.task,
+    title: edited.value.title || props.task.title,
+    description: edited.value.description || props.task.description,
+    deadline: edited.value.deadline ? new Date(edited.value.deadline as any) : undefined,
+    tags: edited.value.tags ? edited.value.tags : props.task.tags,
+    updatedAt: new Date(),
+    status: (edited.value.status as any) ?? props.task.status
+  }
+  emit('edit', updated)
+  // update local state
+  editing.value = false
+  edited.value = null
+}
+
+function toggleEditedTag(tag: number) {
+  if (!edited.value) return
+  const arr = edited.value.tags as number[] | undefined
+  if (!arr) edited.value.tags = [tag]
+  else {
+    const i = arr.indexOf(tag)
+    if (i === -1) arr.push(tag)
+    else arr.splice(i, 1)
+  }
+}
 </script>
 
 <template>
@@ -169,13 +228,19 @@ onUnmounted(() => {
     >
       <div class="modal-container">
         <div class="modal-header">
-          <h2 class="modal-title">{{ task.title }}</h2>
+          <template v-if="!editing">
+            <h2 class="modal-title">{{ task.title }}</h2>
+          </template>
+          <template v-else>
+            <input class="modal-title input" v-model="edited.title" />
+          </template>
           <button class="close-button" @click="emit('close')" aria-label="Close modal">
             ✕
           </button>
         </div>
 
         <div class="modal-body">
+          <template v-if="!editing">
           <!-- Status Badge -->
           <div class="info-section">
             <label class="info-label">Status</label>
@@ -233,36 +298,72 @@ onUnmounted(() => {
             <label class="info-label">Task ID</label>
             <p class="id-text">{{ task.id }}</p>
           </div>
+          </template>
+
+          <template v-else>
+            <div class="info-section">
+              <label class="info-label">Title</label>
+              <input v-model="edited.title" class="input" />
+            </div>
+
+            <div class="info-section">
+              <label class="info-label">Description</label>
+              <textarea v-model="edited.description" class="input" rows="4"></textarea>
+            </div>
+
+            <div class="info-section">
+              <label class="info-label">Deadline</label>
+              <input type="date" v-model="edited.deadline" class="input" />
+            </div>
+
+            <div class="info-section">
+              <label class="info-label">Tags</label>
+              <div class="tags-row">
+                <button type="button" class="tag-btn" :class="{active: edited.tags && edited.tags.includes(0)}" @click="toggleEditedTag(0)">Work</button>
+                <button type="button" class="tag-btn" :class="{active: edited.tags && edited.tags.includes(1)}" @click="toggleEditedTag(1)">Personal</button>
+                <button type="button" class="tag-btn" :class="{active: edited.tags && edited.tags.includes(2)}" @click="toggleEditedTag(2)">Urgent</button>
+                <button type="button" class="tag-btn" :class="{active: edited.tags && edited.tags.includes(3)}" @click="toggleEditedTag(3)">Low</button>
+              </div>
+            </div>
+
+            <div class="info-section">
+              <label class="info-label">Status</label>
+              <select v-model.number="edited.status" class="input">
+                <option v-for="s in statuses" :key="s.id" :value="s.id">{{ s.label }}</option>
+              </select>
+            </div>
+          </template>
+
         </div>
 
         <div class="modal-footer">
-          <button class="btn btn-secondary" @click="emit('close')">
-            Close
-          </button>
-          <div class="status-dropdown" ref="statusBtnRef">
-            <button class="btn btn-secondary" @click="toggleStatusMenu" :aria-expanded="statusMenuOpen" type="button">
-              Change status: {{ statusLabel }}
-            </button>
-
-            <div v-if="statusMenuOpen" class="status-menu" ref="statusMenuRef" role="menu" aria-label="Change status">
-              <button
-                v-for="s in statuses"
-                :key="s.id"
-                class="status-option"
-                @click="selectStatus(s.id)"
-                :aria-pressed="task && task.status === s.id"
-                role="menuitemradio"
-              >
-                {{ s.label }}
+          <template v-if="!editing">
+            <button class="btn btn-secondary" @click="emit('close')">Close</button>
+            <div class="status-dropdown" ref="statusBtnRef">
+              <button class="status-toggle" @click="toggleStatusMenu" :aria-expanded="statusMenuOpen" aria-haspopup="true" type="button">
+                Change status: {{ statusLabel }}
               </button>
+
+              <div v-if="statusMenuOpen" class="status-menu" ref="statusMenuRef" role="menu" aria-label="Change status">
+                <button
+                  v-for="s in statuses"
+                  :key="s.id"
+                  class="status-option"
+                  @click="selectStatus(s.id)"
+                  :aria-pressed="task && task.status === s.id"
+                  role="menuitemradio"
+                >
+                  {{ s.label }}
+                </button>
+              </div>
             </div>
-          </div>
-          <button class="btn btn-primary" @click="emit('edit', task)">
-            ✏️ Edit
-          </button>
-          <button class="btn btn-danger" @click="emit('delete', task)">
-            🗑️ Delete
-          </button>
+            <button class="btn btn-primary" @click="startEdit">✏️ Edit</button>
+            <button class="btn btn-danger" @click="emit('delete', task)">🗑️ Delete</button>
+          </template>
+          <template v-else>
+            <button class="btn btn-secondary" @click="cancelEdit">Cancel</button>
+            <button class="btn btn-primary" @click="saveEdit">Save</button>
+          </template>
         </div>
       </div>
     </div>

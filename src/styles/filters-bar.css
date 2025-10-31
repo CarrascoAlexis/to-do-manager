@@ -1,0 +1,90 @@
+/* FiltersBar component styles
+   This file contains the styles for the status filter buttons and sort controls.
+   It's purposely small and uses theme variables defined in themes.css / global.css.
+*/
+
+.filter-section {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Make filter buttons visually match the primary app buttons (.btn)
+   — unified padding, font, border-radius, and focus/active treatments */
+.filter-btn {
+  padding: 0.625rem 1.25rem;
+  border-radius: 8px;
+  border: 2px solid var(--sidebar-border);
+  background: var(--card-bg);
+  color: var(--text-color);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  text-transform: capitalize;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filter-btn:hover {
+  background: var(--hover-bg);
+  border-color: var(--primary-color);
+}
+
+.filter-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 6px 18px rgba(2,6,23,0.06), 0 0 0 6px rgba(var(--accent-color-rgb, 99,102,241), 0.08);
+}
+
+.filter-btn.active {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: var(--on-accent, #ffffff);
+}
+
+.sort-section {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.sort-section label {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.sort-section select {
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  border: 2px solid var(--sidebar-border);
+  background: var(--card-bg);
+  color: var(--text-color);
+}
+
+/* Make the filter dropdown match the visual style of the sort select */
+.filter-section select,
+.sort-section select {
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  border: 2px solid var(--sidebar-border);
+  background: var(--sidebar-bg);
+  color: var(--text-color);
+}
+
+/* Make dropdowns use theme colors and show a themed focus glow */
+.sort-section select:focus,
+.filter-section select:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: var(--header-glow, 0 0 0 4px rgba(var(--accent-color-rgb, 99,102,241), 0.08));
+}
+
+.controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0.5rem 0 1rem 0;
+  flex-wrap: wrap;
+}

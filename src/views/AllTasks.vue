@@ -1,18 +1,11 @@
-﻿<script setup lang="ts">
-// Home view
-// This view shows the main task list for the user (Home). It wires
-// header controls (search, status filter, sorting) to local state and
-// loads tasks using `loadTasksForHome`. Clicking a task opens the
-// `TaskModal` for viewing (or editing via modal actions).
-//
-// Key bindings:
-// - handleTaskClick(task) -> open modal for task
-// - openEditModal(task) -> open modal pre-filled for editing
-// - handleTaskEdit(task) -> save edited task back to storage
-// - header emits update:search / update:activeFilter / update:sortBy / update:sortOrder
+<script setup lang="ts">
+// AllTasks view
+// Shows every task in the system (includes archived and cancelled items).
+// Reuses the same layout as Home so the format remains consistent.
+
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import type { Task } from '@/resources/tasks'
-import { loadTasksForHome, saveAllTasks } from '@/resources/tasks'
+import { loadTasks, saveAllTasks, Status } from '@/resources/tasks'
 import TaskCard from '@/components/TaskCard.vue'
 import TaskModal from '@/components/TaskModal.vue'
 import HeaderSection from '@/components/HeaderSection.vue'
@@ -29,16 +22,41 @@ const activeFilter = ref<number | 'all'>('all')
 const sortBy = ref<'deadline' | 'createdAt' | 'updatedAt'>('deadline')
 const sortOrder = ref<'asc' | 'desc'>('asc')
 
-const loadTasksData = () => {
-  tasks.value = loadTasksForHome(filter.value, sortBy.value, sortOrder.value)
+const getTimeValue = (task: Task) => {
+  const value = (task as any)[sortBy.value] as Date | undefined
+  if (!value) return sortBy.value === 'deadline' ? Infinity : 0
+  return value.getTime()
 }
 
-// Auto-apply sorting when control values change
+const loadTasksData = () => {
+  const all = loadTasks()
+
+  // Apply search filter
+  const q = filter.value.searchTerm ? filter.value.searchTerm.trim().toLowerCase() : ''
+  let filtered = all.filter(t => {
+    const matchesSearch = q
+      ? (t.title.toLowerCase().includes(q) || (t.description ? t.description.toLowerCase().includes(q) : false))
+      : true
+    const matchesStatus = (filter.value.status !== undefined) ? t.status === filter.value.status : true
+    return matchesSearch && matchesStatus
+  })
+
+  // Sort
+  filtered.sort((a, b) => {
+    const ta = getTimeValue(a)
+    const tb = getTimeValue(b)
+    const diff = ta - tb
+    return sortOrder.value === 'asc' ? diff : -diff
+  })
+
+  tasks.value = filtered
+}
+
 watch([sortBy, sortOrder], () => {
   loadTasksData()
 })
 
-const setStatusFilter = (status: number | 'all') => {
+function setStatusFilter(status: number | 'all') {
   activeFilter.value = status
   if (status === 'all') {
     filter.value = {}
@@ -48,9 +66,8 @@ const setStatusFilter = (status: number | 'all') => {
   loadTasksData()
 }
 
-loadTasksData()
-
 onMounted(() => {
+  loadTasksData()
   window.addEventListener('tasks-updated', loadTasksData)
 })
 
@@ -58,14 +75,12 @@ onUnmounted(() => {
   window.removeEventListener('tasks-updated', loadTasksData)
 })
 
-// Event handlers
 function handleTaskClick(task: Task) {
   selectedTask.value = task
   isModalOpen.value = true
 }
 
 function openEditModal(task: Task) {
-  // Open the modal pre-filled for editing when the card's Edit button is clicked
   selectedTask.value = task
   isModalOpen.value = true
   selectedIsEdit.value = true
@@ -74,47 +89,46 @@ function openEditModal(task: Task) {
 function handleCloseModal() {
   isModalOpen.value = false
   selectedIsEdit.value = false
-  setTimeout(() => {
-    selectedTask.value = null
-  }, 300) // Wait for animation to finish
+  setTimeout(() => { selectedTask.value = null }, 300)
 }
 
 function handleTaskEdit(task: Task) {
-  // Save edited task back to storage and refresh list
-  console.log('Save edited task:', task)
   const idx = tasks.value.findIndex(t => t.id === task.id)
   if (idx !== -1) {
     tasks.value[idx] = { ...tasks.value[idx], ...task, updatedAt: new Date() }
-    saveAllTasks(tasks.value)
+    // persist: load full list, replace item and save all
+    const all = loadTasks()
+    const ai = all.findIndex(a => a.id === task.id)
+    if (ai !== -1) {
+      all[ai] = { ...all[ai], ...task, updatedAt: new Date() }
+      saveAllTasks(all)
+    }
     loadTasksData()
   }
   handleCloseModal()
 }
 
 function handleTaskDelete(task: Task) {
-  console.log('Delete task:', task)
-  const updatedTasks = tasks.value.filter(t => t.id !== task.id)
-  saveAllTasks(updatedTasks)
+  const all = loadTasks()
+  const updated = all.filter(t => t.id !== task.id)
+  saveAllTasks(updated)
   loadTasksData()
   handleCloseModal()
 }
 
 function handleStatusChange(task: Task, newStatus: number) {
-  console.log('Status change:', task, newStatus)
-  const taskToUpdate = tasks.value.find(t => t.id === task.id)
-  if (taskToUpdate) {
-    taskToUpdate.status = newStatus
-    taskToUpdate.updatedAt = new Date()
-    saveAllTasks(tasks.value)
+  const all = loadTasks()
+  const toUpdate = all.find(t => t.id === task.id)
+  if (toUpdate) {
+    toUpdate.status = newStatus
+    toUpdate.updatedAt = new Date()
+    saveAllTasks(all)
     loadTasksData()
   }
 }
 
-// typed handlers for header control events (avoid implicit any in templates)
 function onUpdateSearch(v: string) {
-  // ensure filter.value exists and update searchTerm
   filter.value = { ...(filter.value || {}), searchTerm: v }
-  // reload tasks immediately when search changes
   loadTasksData()
 }
 
@@ -125,20 +139,17 @@ function onUpdateActiveFilter(v: number | 'all') {
 
 function onUpdateSortBy(v: 'deadline' | 'createdAt' | 'updatedAt') {
   sortBy.value = v
-  // watch on [sortBy, sortOrder] will reload
 }
 
 function onUpdateSortOrder(v: 'asc' | 'desc') {
   sortOrder.value = v
-  // watch on [sortBy, sortOrder] will reload
 }
 </script>
 
 <template>
-  <!-- Home view template: lists tasks and includes the shared HeaderSection -->
   <div class="view-container">
     <HeaderSection
-      title="🏠 Home"
+      title="📋 All Tasks"
       :search="filter.searchTerm"
       :activeFilter="activeFilter"
       :sortBy="sortBy"
@@ -152,10 +163,8 @@ function onUpdateSortOrder(v: 'asc' | 'desc') {
     />
 
     <div class="tasks-section">
-          <!-- Apply is now automatic when selects change -->
       <div v-if="tasks.length === 0" class="empty-state">
-        <p v-if="activeFilter === 'all'">No tasks yet. Create your first task to get started!</p>
-        <p v-else>No tasks found with this status filter.</p>
+        <p>No tasks found.</p>
       </div>
 
       <div v-else class="tasks-list">
@@ -172,7 +181,6 @@ function onUpdateSortOrder(v: 'asc' | 'desc') {
       </div>
     </div>
 
-    <!-- Task Modal -->
     <TaskModal
       :task="selectedTask"
       :is-open="isModalOpen"

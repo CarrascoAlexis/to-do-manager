@@ -191,7 +191,7 @@ function loadArchivedTasks(): Task[] {
  * @returns {Task[]} A filtered and sorted array of tasks. Returns all tasks if no filters applied.
  * 
  * @remarks
- * - Search is case-sensitive and matches against task title using string inclusion
+ * - Search is case-insensitive and matches against task title and description using string inclusion
  * - When no status filter is provided, tasks of all statuses are returned
  * - Results are sorted by creation date (newest first) regardless of sortBy parameter
  * - Empty filter object returns all tasks sorted by creation date
@@ -239,8 +239,17 @@ function loadTasksForHome(
 
     // Then apply filters
     return allTasks.filter(task => {
-        const matchesSearchTerm = filter.searchTerm ? task.title.includes(filter.searchTerm) : true;
-        const matchesStatus = filter.status !== undefined ? task.status === filter.status : true;
+        // Normalize searchTerm for case-insensitive comparison and ignore surrounding whitespace
+        const q = filter.searchTerm ? filter.searchTerm.trim().toLowerCase() : ''
+        const matchesSearchTerm = q
+            ? (task.title.toLowerCase().includes(q) || (task.description ? task.description.toLowerCase().includes(q) : false))
+            : true;
+            // If a specific status filter is provided, match only that status.
+            // Otherwise, by default exclude ARCHIVED and CANCELLED tasks from the Home list
+            // so users don't see removed/cancelled items unless they explicitly request them.
+            const matchesStatus = (filter.status !== undefined)
+                ? task.status === filter.status
+                : (task.status !== Status.ARCHIVED && task.status !== Status.CANCELLED);
         return matchesSearchTerm && matchesStatus;
     })
 }

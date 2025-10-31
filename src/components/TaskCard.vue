@@ -52,13 +52,34 @@ const formatDate = (date: Date) => {
 }
 
 const TAG_LABELS: Record<string | number, string> = {
-  [Tag.LOW_PRIORITY as any]: 'Low priority',
+  [Tag.WORK as any]: 'Work',
   [Tag.PERSONAL as any]: 'Personal',
   [Tag.URGENT as any]: 'Urgent',
+  [Tag.LOW_PRIORITY as any]: 'Low priority',
 }
 
 const getTagLabel = (tag: Tag) => {
-  return TAG_LABELS[tag as Tag] ?? String(tag ?? '')
+  // allow numeric or string tags; try mapping first, then fallback to enum name or a generic label
+  const mapped = TAG_LABELS[tag as any]
+  if (mapped) return mapped
+  // if tag is numeric enum value, try to get the enum key name
+  try {
+    const key = (Tag as any)[tag]
+    if (key) return String(key).replace(/_/g, ' ').toLowerCase().replace(/^(.)/, s => s.toUpperCase())
+  } catch (e) {
+    // ignore
+  }
+  return String(tag ?? '')
+}
+
+const getTagClass = (tag: Tag) => {
+  switch (tag) {
+    case Tag.WORK: return 'tag-work'
+    case Tag.PERSONAL: return 'tag-personal'
+    case Tag.URGENT: return 'tag-urgent'
+    case Tag.LOW_PRIORITY: return 'tag-low-priority'
+    default: return ''
+  }
 }
 
 // Normalize tags so TaskCard can accept either a single tag or an array of tags
@@ -101,21 +122,23 @@ const deadlineClass = computed(() => {
     role="article"
     :aria-label="`Task: ${task.title}`"
   >
+    <!-- small colored side bar that reflects the task status -->
+    <!-- kept inside the card so it moves with the card and uses the same status classes -->
+    <!-- Note: styling for .status-side is in src/styles/task-card.css -->
+    
     <!-- Main row layout -->
     <div class="task-row">
-      <!-- Status badge -->
-      <div class="task-status">
-        <span :class="['status-badge', statusClass]">
-          {{ statusLabel }}
-        </span>
-      </div>
-
+      <div class="status-side" :class="statusClass" aria-hidden="true"></div>
       <!-- Task content -->
       <div class="task-content">
         <h3 class="task-title">{{ task.title }}</h3>
         <p v-if="showDescription && task.description" class="task-description">
           {{ task.description }}
         </p>
+        <!-- Status label placed under the title/description for clearer grouping -->
+        <div class="task-status-row">
+          <span :class="['status-badge', statusClass]">{{ statusLabel }}</span>
+        </div>
       </div>
 
       <!-- Tags -->
@@ -123,7 +146,7 @@ const deadlineClass = computed(() => {
         <span 
           v-for="(tag, idx) in tagsList" 
           :key="`${tag}-${idx}`"
-          class="tag"
+          :class="['tag', getTagClass(tag)]"
         >
           {{ getTagLabel(tag) }}
         </span>
@@ -150,17 +173,7 @@ const deadlineClass = computed(() => {
 
       <!-- Actions -->
       <div class="task-actions">
-        <button 
-          class="action-btn edit-btn"
-          @click.stop="emit('edit', task)"
-          aria-label="Edit task"
-          title="Edit"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
+        <!-- edit button removed — edits are opened via clicking the card or modal actions -->
         <button 
           class="action-btn delete-btn"
           @click.stop="emit('delete', task)"

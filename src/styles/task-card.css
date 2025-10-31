@@ -12,18 +12,60 @@
 
 /* Task Card Component Styles */
 
+/* Status color variables (light-mode defaults). These can be overridden
+   by theme files or by media queries for dark mode. */
+:root {
+  --status-todo-bg: #e0e7ff;
+  --status-todo-color: #4338ca;
+
+  --status-in-progress-bg: #fef3c7;
+  --status-in-progress-color: #92400e;
+
+  --status-done-bg: #d1fae5;
+  --status-done-color: #065f46;
+
+  --status-cancelled-bg: #fee2e2;
+  --status-cancelled-color: #991b1b;
+
+  --status-archived-bg: #f3f4f6;
+  --status-archived-color: #6b7280;
+}
+
+/* Tag color variables (light-mode defaults). These can be overridden by
+   theme files or dark-mode media queries. */
+:root {
+  --tag-work-bg: rgba(59,130,246,0.12);
+  --tag-work-color: #0369a1;
+  --tag-work-border: rgba(59,130,246,0.18);
+
+  --tag-personal-bg: rgba(139,92,246,0.12);
+  --tag-personal-color: #6d28d9;
+  --tag-personal-border: rgba(139,92,246,0.18);
+
+  --tag-urgent-bg: rgba(239,68,68,0.12);
+  --tag-urgent-color: #9f1239;
+  --tag-urgent-border: rgba(239,68,68,0.18);
+
+  --tag-low-priority-bg: rgba(107,114,128,0.12);
+  --tag-low-priority-color: #374151;
+  --tag-low-priority-border: rgba(107,114,128,0.18);
+}
+
 .task-card {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  padding: 1rem;
+  /* extra left padding to make room for the status side bar */
+  padding: 1rem 1rem 1rem 1.5rem;
   transition: all 0.2s ease;
   cursor: pointer;
   margin-bottom: 0.75rem;
+  position: relative;
+  overflow: hidden; /* ensure the side bar corners are clipped cleanly */
 }
 
 .task-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px var(--nav-active-bg);
   border-color: var(--primary-color);
   transform: translateY(-1px);
 }
@@ -33,6 +75,19 @@
   align-items: flex-start; /* align children to the top for a tidy row layout */
   gap: 1rem;
   flex-wrap: wrap;
+}
+
+/* small colored vertical bar on the left that shows the task status color */
+.status-side {
+  position: absolute; /* placed inside the card area */
+  left: 0; /* flush with the card's left edge */
+  top: 0; /* span full height so the bar reaches card corners */
+  bottom: 0;
+  width: 6px;
+  /* match the card's left border radius so it looks flush */
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+  flex-shrink: 0;
 }
 
 /* Status Badge */
@@ -52,34 +107,39 @@
 }
 
 .status-todo {
-  background: #e0e7ff;
-  color: #4338ca;
+  background: var(--status-todo-bg, #e0e7ff);
+  color: var(--status-todo-color, #4338ca);
 }
 
 .status-in-progress {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--status-in-progress-bg, #fef3c7);
+  color: var(--status-in-progress-color, #92400e);
 }
 
 .status-done {
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--status-done-bg, #d1fae5);
+  color: var(--status-done-color, #065f46);
 }
 
 .status-cancelled {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--status-cancelled-bg, #fee2e2);
+  color: var(--status-cancelled-color, #991b1b);
 }
 
 .status-archived {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--status-archived-bg, #f3f4f6);
+  color: var(--status-archived-color, #6b7280);
 }
 
 /* Task Content */
 .task-content {
   flex: 1;
   min-width: 200px;
+}
+
+/* when the status badge is shown under the title/description */
+.task-status-row {
+  margin-top: 0.5rem;
 }
 
 .task-title {
@@ -114,6 +174,37 @@
   font-size: 0.75rem;
   font-weight: 500;
 }
+
+/* Per-tag colors */
+.tag-work {
+  background: var(--tag-work-bg, rgba(59,130,246,0.12));
+  color: var(--tag-work-color, #0369a1); /* blue */
+  border: 1px solid var(--tag-work-border, rgba(59,130,246,0.18));
+}
+
+.tag-personal {
+  background: var(--tag-personal-bg, rgba(139,92,246,0.12));
+  color: var(--tag-personal-color, #6d28d9); /* purple */
+  border: 1px solid var(--tag-personal-border, rgba(139,92,246,0.18));
+}
+
+.tag-urgent {
+  background: var(--tag-urgent-bg, rgba(239,68,68,0.12));
+  color: var(--tag-urgent-color, #9f1239); /* red */
+  border: 1px solid var(--tag-urgent-border, rgba(239,68,68,0.18));
+}
+
+.tag-low-priority {
+  background: var(--tag-low-priority-bg, rgba(107,114,128,0.12));
+  color: var(--tag-low-priority-color, #374151); /* gray */
+  border: 1px solid var(--tag-low-priority-border, rgba(107,114,128,0.18));
+}
+
+  /* Dark-mode tag overrides */
+  /* Undo: do not override tag variables globally for dark color-scheme
+     here — theme-specific class rules for `.theme-dark` and
+     `.theme-halloween` are defined below to restore the previous
+     visual behavior for those themes only. */
 
 /* Dates */
 .task-dates {
@@ -274,30 +365,12 @@
     box-shadow: 0 2px 8px var(--nav-active-bg);
   }
 
-  .status-todo {
-    background: #312e81;
-    color: #c7d2fe;
-  }
-
-  .status-in-progress {
-    background: #78350f;
-    color: #fef3c7;
-  }
-
-  .status-done {
-    background: #064e3b;
-    color: #a7f3d0;
-  }
-
-  .status-cancelled {
-    background: #7f1d1d;
-    color: #fecaca;
-  }
-
-  .status-archived {
-    background: #374151;
-    color: #d1d5db;
-  }
+  /* Dark-mode: override the status color variables so badges and the
+     side bar adapt correctly to dark theme. */
+  /* Undo: do not override status variables globally for dark color-scheme
+    here — instead, theme-specific overrides for `.theme-dark` and
+    `.theme-halloween` are applied below so these two themes get the
+    previous behavior while other dark-preferring users keep variable-based colors. */
 
   /* Deadline dark mode */
   .deadline-item.deadline-soon {
@@ -330,3 +403,28 @@
     color: #fca5a5;
   }
 }
+
+/* Theme-specific dark overrides: revert the status and tag colors for
+   `.theme-dark` and `.theme-halloween` to their previous explicit values
+   (this undoes the last two variable-based requests for these themes only). */
+.theme-dark .status-todo { background: #312e81; color: #c7d2fe; }
+.theme-dark .status-in-progress { background: #78350f; color: #fef3c7; }
+.theme-dark .status-done { background: #064e3b; color: #a7f3d0; }
+.theme-dark .status-cancelled { background: #7f1d1d; color: #fecaca; }
+.theme-dark .status-archived { background: #374151; color: #d1d5db; }
+
+.theme-dark .tag-work { background: rgba(59,130,246,0.18); color: #bfdbfe; border-color: rgba(59,130,246,0.25); }
+.theme-dark .tag-personal { background: rgba(139,92,246,0.18); color: #e9d5ff; border-color: rgba(139,92,246,0.25); }
+.theme-dark .tag-urgent { background: rgba(239,68,68,0.18); color: #fecaca; border-color: rgba(239,68,68,0.25); }
+.theme-dark .tag-low-priority { background: rgba(107,114,128,0.18); color: #d1d5db; border-color: rgba(107,114,128,0.25); }
+
+.theme-halloween .status-todo { background: #312e81; color: #c7d2fe; }
+.theme-halloween .status-in-progress { background: #78350f; color: #fef3c7; }
+.theme-halloween .status-done { background: #064e3b; color: #a7f3d0; }
+.theme-halloween .status-cancelled { background: #7f1d1d; color: #fecaca; }
+.theme-halloween .status-archived { background: #374151; color: #d1d5db; }
+
+.theme-halloween .tag-work { background: rgba(59,130,246,0.18); color: #bfdbfe; border-color: rgba(59,130,246,0.25); }
+.theme-halloween .tag-personal { background: rgba(139,92,246,0.18); color: #e9d5ff; border-color: rgba(139,92,246,0.25); }
+.theme-halloween .tag-urgent { background: rgba(239,68,68,0.18); color: #fecaca; border-color: rgba(239,68,68,0.25); }
+.theme-halloween .tag-low-priority { background: rgba(107,114,128,0.18); color: #d1d5db; border-color: rgba(107,114,128,0.25); }

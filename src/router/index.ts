@@ -53,6 +53,11 @@ const router = createRouter({
       component: () => import('../views/DayTasks.vue')
     },
     {
+      path: '/all-tasks',
+      name: 'all-tasks',
+      component: () => import('../views/AllTasks.vue')
+    },
+    {
       path: '/research/:query',
       name: 'research',
       component: () => import('../views/Research.vue')

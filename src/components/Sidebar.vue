@@ -53,14 +53,15 @@
         <span class="label">Day Tasks</span>
       </router-link>
 
-      <router-link to="/research" class="nav-item">
+      <router-link to="/all-tasks" class="nav-item">
         <span class="icon" aria-hidden="true">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-            <path d="M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            <rect x="3" y="4" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.5" />
+            <path d="M7 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            <path d="M7 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
           </svg>
         </span>
-        <span class="label">Research</span>
+        <span class="label">All Tasks</span>
       </router-link>
 
       <router-link to="/archived" class="nav-item">

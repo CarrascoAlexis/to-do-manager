@@ -18,16 +18,72 @@
 
 /* Header section */
 .header-section {
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center; /* center the header island */
+  gap: 1rem;
 }
 
 .header-section h1 {
-  margin-bottom: 0.5rem;
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--text-color);
 }
 
 .header-section p {
-  font-size: 1rem;
+  margin: 0;
+  font-size: 0.95rem;
   color: var(--text-secondary);
+}
+
+/* Small island-style container for search + filters */
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02));
+  border: 1px solid rgba(0,0,0,0.06);
+  padding: 0.75rem 1rem; /* larger pill */
+  border-radius: 999px; /* pill-like rounded */
+  box-shadow: var(--header-shadow, 0 14px 36px rgba(2,6,23,0.07));
+  max-width: 1000px;
+  width: 100%;
+  justify-content: flex-start; /* left-align content so right-side controls can use auto margin */
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+  gap: 1rem;
+}
+
+/* allow direct children to shrink so long controls won't force the toggle to wrap */
+.header-controls > * {
+  min-width: 0;
+}
+
+/* ensure the FiltersBar internal controls can take remaining space and shrink when needed */
+.header-controls .controls-row {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.header-controls .search-input {
+  width: 260px;
+  padding: 0.5rem 0.6rem;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-color);
+  font-size: 1rem;
+}
+
+.header-controls .search-input:focus {
+  outline: none;
+  /* box-shadow: var(--header-shadow, 0 8px 22px rgba(2,6,23,0.07)), 0 0 0 5px rgba(var(--accent-color-rgb, 99,102,241), 0.12); */
+}
+
+/* Highlight the whole header island when any control inside is focused */
+.header-controls:focus-within {
+  box-shadow: var(--header-shadow, 0 12px 34px var(--nav-active-bg)), var(--header-glow, 0 0 0 6px rgba(var(--accent-color-rgb, 99,102,241), 0.08));
+  border-color: rgba(var(--accent-color-rgb, 99,102,241), 0.18);
 }
 
 /* Tasks section */
@@ -198,6 +254,18 @@
   }
   .controls-row .filter-section {
     margin-bottom: 0.75rem;
+  }
+  .header-section {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+  .header-controls {
+    width: 100%;
+    justify-content: center;
+  }
+  .header-controls .search-input {
+    width: 100%;
   }
 }
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Sidebar from './components/Sidebar.vue'
+import AddTaskFab from './components/AddTaskFab.vue'
 </script>
 
 <template>
@@ -8,6 +9,7 @@ import Sidebar from './components/Sidebar.vue'
     <main class="main-content">
       <router-view />
     </main>
+    <AddTaskFab />
   </div>
 </template>
 

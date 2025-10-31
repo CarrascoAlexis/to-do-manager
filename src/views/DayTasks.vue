@@ -1,16 +1,75 @@
 ﻿<script setup lang="ts">
-import { ref, onMounted } from 'vue'
+// DayTasks view
+// Shows tasks whose deadline is today. Uses `loadTodayTasks` to fetch
+// items and supports header-driven search/status filtering and sorting.
+//
+// Key handlers:
+// - handleTaskClick -> opens TaskModal for the selected task
+// - handleTaskEdit/delete/statusChange -> update persisted tasks
+import { ref, onMounted, watch } from 'vue'
 import TaskCard from '../components/TaskCard.vue'
 import TaskModal from '../components/TaskModal.vue'
+import HeaderSection from '@/components/HeaderSection.vue'
 import type { Task } from '../resources/tasks'
-import { loadTodayTasks, saveAllTasks, loadTasks } from '../resources/tasks'
+import { loadTodayTasks, saveAllTasks, loadTasks, Status } from '../resources/tasks'
 
 const tasks = ref<Task[]>([])
 const selectedTask = ref<Task | null>(null)
 const isModalOpen = ref(false)
+const selectedIsEdit = ref(false)
+
+// Filter controls (status)
+const filter = ref<{ status?: number; searchTerm?: string }>({})
+const activeFilter = ref<number | 'all'>('all')
+
+// Sorting controls
+const sortBy = ref<'deadline' | 'createdAt' | 'updatedAt'>('deadline')
+const sortOrder = ref<'asc' | 'desc'>('asc')
+
+const setStatusFilter = (status: number | 'all') => {
+  activeFilter.value = status
+  if (status === 'all') {
+    filter.value = {}
+  } else {
+    filter.value = { status }
+  }
+  loadTasksData()
+}
+
+watch([sortBy, sortOrder], () => {
+  loadTasksData()
+})
 
 const loadTasksData = () => {
-  tasks.value = loadTodayTasks()
+  // load today's tasks then apply optional status filter and sorting
+  let all = loadTodayTasks()
+
+  // Apply searchTerm filter
+  if (filter.value.searchTerm && filter.value.searchTerm.trim()) {
+    const q = filter.value.searchTerm.toLowerCase()
+    all = all.filter(t => (t.title + ' ' + (t.description || '')).toLowerCase().includes(q))
+  }
+
+  // Apply status filter
+  if (filter.value.status !== undefined) {
+    all = all.filter(t => t.status === filter.value.status)
+  }
+
+  // Sorting similar to loadTasksForHome
+  const getTimeValue = (task: Task) => {
+    const value = (task as any)[sortBy.value] as Date | undefined
+    if (!value) return sortBy.value === 'deadline' ? Infinity : 0
+    return value.getTime()
+  }
+
+  all.sort((a, b) => {
+    const ta = getTimeValue(a)
+    const tb = getTimeValue(b)
+    const diff = ta - tb
+    return sortOrder.value === 'asc' ? diff : -diff
+  })
+
+  tasks.value = all
 }
 
 onMounted(() => {
@@ -22,8 +81,15 @@ const handleTaskClick = (task: Task) => {
   isModalOpen.value = true
 }
 
+const openEditModal = (task: Task) => {
+  selectedTask.value = task
+  isModalOpen.value = true
+  selectedIsEdit.value = true
+}
+
 const handleCloseModal = () => {
   isModalOpen.value = false
+  selectedIsEdit.value = false
   setTimeout(() => {
     selectedTask.value = null
   }, 300) // Wait for animation to finish
@@ -55,11 +121,49 @@ const handleStatusChange = (task: Task, newStatus: number) => {
     loadTasksData()
   }
 }
+
+function onSearch(e: Event) {
+  const v = (e.target as HTMLInputElement).value
+  filter.value = { ...(filter.value || {}), searchTerm: v }
+  loadTasksData()
+}
+
+function onUpdateSearchFromHeader(v: string) {
+  filter.value = { ...(filter.value || {}), searchTerm: v }
+  loadTasksData()
+}
+
+function onUpdateActiveFilter(v: number | 'all') {
+  activeFilter.value = v
+  setStatusFilter(v)
+}
+
+function onUpdateSortBy(v: 'deadline' | 'createdAt' | 'updatedAt') {
+  sortBy.value = v
+}
+
+function onUpdateSortOrder(v: 'asc' | 'desc') {
+  sortOrder.value = v
+}
 </script>
 
 <template>
+  <!-- Day Tasks template: tasks due today with quick actions -->
   <div class="view-container">
-  <h1>📅 Today's Tasks</h1>
+    <HeaderSection
+      title="📅 Today's Tasks"
+      :search="filter.searchTerm"
+      :activeFilter="activeFilter"
+      :sortBy="sortBy"
+      :sortOrder="sortOrder"
+      statusMode="dropdown"
+  @update:search="onUpdateSearchFromHeader"
+      @update:activeFilter="onUpdateActiveFilter"
+      @update:sortBy="onUpdateSortBy"
+      @update:sortOrder="onUpdateSortOrder"
+      @update:view="(v) => console.log('View change:', v)"
+    />
+
   <p v-if="tasks.length === 0" class="empty-message">No tasks due today. Enjoy your day! 🎉</p>
     <div v-else class="tasks-list">
       <TaskCard
@@ -68,7 +172,7 @@ const handleStatusChange = (task: Task, newStatus: number) => {
         :task="task"
         :show-description="true"
         @click="handleTaskClick"
-        @edit="handleTaskEdit"
+        @edit="openEditModal"
         @delete="handleTaskDelete"
         @status-change="handleStatusChange"
       />
@@ -78,6 +182,7 @@ const handleStatusChange = (task: Task, newStatus: number) => {
     <TaskModal
       :task="selectedTask"
       :is-open="isModalOpen"
+      :open-in-edit="selectedIsEdit"
       @close="handleCloseModal"
       @edit="handleTaskEdit"
       @delete="handleTaskDelete"

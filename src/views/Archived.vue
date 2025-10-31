@@ -1,29 +1,94 @@
 ﻿<script setup lang="ts">
-import { ref, onMounted } from 'vue'
+// Archived view
+// Displays tasks in the ARCHIVED status. This view reuses the header
+// controls for filtering/sorting but forces the status filter to ARCHIVED
+// when loading tasks via `loadTasksForHome`.
+//
+// Key functions:
+// - handleTaskClick -> open TaskModal
+// - handleTaskDelete/statusChange -> modify stored tasks and reload
+import { ref, onMounted, watch } from 'vue'
 import TaskCard from '../components/TaskCard.vue'
 import TaskModal from '../components/TaskModal.vue'
+import HeaderControls from '@/components/HeaderControls.vue'
 import type { Task } from '../resources/tasks'
-import { loadArchivedTasks, saveAllTasks, loadTasks } from '../resources/tasks'
+import { loadTasksForHome, saveAllTasks, Status, loadTasks } from '../resources/tasks'
 
 const tasks = ref<Task[]>([])
 const selectedTask = ref<Task | null>(null)
 const isModalOpen = ref(false)
+const selectedIsEdit = ref(false)
+
+// Filter controls (status)
+const filter = ref<{ status?: number; searchTerm?: string }>({})
+const activeFilter = ref<number | 'all'>('all')
+
+// Sorting controls
+const sortBy = ref<'deadline' | 'createdAt' | 'updatedAt'>('deadline')
+const sortOrder = ref<'asc' | 'desc'>('asc')
+
+const setStatusFilter = (status: number | 'all') => {
+  activeFilter.value = status
+  if (status === 'all') {
+    filter.value = {}
+  } else {
+    filter.value = { status }
+  }
+  loadTasksData()
+}
+
+// Auto-apply sorting when control values change
+watch([sortBy, sortOrder], () => {
+  loadTasksData()
+})
 
 const loadTasksData = () => {
-  tasks.value = loadArchivedTasks()
+  // reuse centralized loader with sorting and status filter and optional search
+  tasks.value = loadTasksForHome({ status: Status.ARCHIVED, searchTerm: filter.value.searchTerm }, sortBy.value, sortOrder.value)
 }
 
 onMounted(() => {
   loadTasksData()
 })
 
+function onSearch(e: Event) {
+  const v = (e.target as HTMLInputElement).value
+  filter.value = { ...(filter.value || {}), searchTerm: v }
+  loadTasksData()
+}
+
+function onUpdateSearchFromHeader(v: string) {
+  filter.value = { ...(filter.value || {}), searchTerm: v }
+  loadTasksData()
+}
+
+function onUpdateActiveFilter(v: number | 'all') {
+  activeFilter.value = v
+  setStatusFilter(v)
+}
+
+function onUpdateSortBy(v: 'deadline' | 'createdAt' | 'updatedAt') {
+  sortBy.value = v
+}
+
+function onUpdateSortOrder(v: 'asc' | 'desc') {
+  sortOrder.value = v
+}
+
 const handleTaskClick = (task: Task) => {
   selectedTask.value = task
   isModalOpen.value = true
 }
 
+const openEditModal = (task: Task) => {
+  selectedTask.value = task
+  isModalOpen.value = true
+  selectedIsEdit.value = true
+}
+
 const handleCloseModal = () => {
   isModalOpen.value = false
+  selectedIsEdit.value = false
   setTimeout(() => {
     selectedTask.value = null
   }, 300)
@@ -58,8 +123,24 @@ const handleStatusChange = (task: Task, newStatus: number) => {
 </script>
 
 <template>
+  <!-- Archived tasks template: read-only listing of archived items -->
   <div class="view-container">
-    <h1>📦 Archived</h1>
+
+    <div class="header-section">
+      <HeaderControls
+        :search="filter.searchTerm"
+        :activeFilter="activeFilter"
+        :sortBy="sortBy"
+        :sortOrder="sortOrder"
+        statusMode="dropdown"
+  @update:search="onUpdateSearchFromHeader"
+        @update:activeFilter="onUpdateActiveFilter"
+        @update:sortBy="onUpdateSortBy"
+        @update:sortOrder="onUpdateSortOrder"
+        @update:view="(v) => console.log('View change requested:', v)"
+      />
+    </div>
+
     <p v-if="tasks.length === 0" class="empty-message">No archived tasks. Tasks you archive will appear here.</p>
     <div v-else class="tasks-list">
       <TaskCard
@@ -68,7 +149,7 @@ const handleStatusChange = (task: Task, newStatus: number) => {
         :task="task"
         :show-description="true"
         @click="handleTaskClick"
-        @edit="handleTaskEdit"
+        @edit="openEditModal"
         @delete="handleTaskDelete"
         @status-change="handleStatusChange"
       />
@@ -78,6 +159,7 @@ const handleStatusChange = (task: Task, newStatus: number) => {
     <TaskModal
       :task="selectedTask"
       :is-open="isModalOpen"
+      :open-in-edit="selectedIsEdit"
       @close="handleCloseModal"
       @edit="handleTaskEdit"
       @delete="handleTaskDelete"

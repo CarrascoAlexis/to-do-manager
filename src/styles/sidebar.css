@@ -1,3 +1,15 @@
+/*
+  sidebar.css — Sidebar component styles
+
+  Purpose:
+  - Styles for the application sidebar: layout, responsive behaviour, and the theme
+    switcher UI located in the footer.
+
+  Notes:
+  - Colors are driven by theme variables (see `src/styles/themes.css` / `global.css`).
+  - Keep sidebar-specific rules here; avoid scattering sidebar styles across multiple files.
+*/
+
 /* Sidebar styles (moved from Sidebar.vue) */
 
 /* Mobile menu button (floating) */

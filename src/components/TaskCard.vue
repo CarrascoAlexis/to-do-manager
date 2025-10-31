@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Task } from '@/resources/tasks'
+import { Tag } from '@/resources/tasks'
 
 interface Props {
   task: Task
@@ -50,11 +51,22 @@ const formatDate = (date: Date) => {
   }).format(date)
 }
 
-// Tag label mapping
-const getTagLabel = (tag: number) => {
-  const labels = ['Work', 'Personal', 'Urgent', 'Low Priority']
-  return labels[tag] || 'Unknown'
+const TAG_LABELS: Record<string | number, string> = {
+  [Tag.LOW_PRIORITY as any]: 'Low priority',
+  [Tag.PERSONAL as any]: 'Personal',
+  [Tag.URGENT as any]: 'Urgent',
 }
+
+const getTagLabel = (tag: Tag) => {
+  return TAG_LABELS[tag as Tag] ?? String(tag ?? '')
+}
+
+// Normalize tags so TaskCard can accept either a single tag or an array of tags
+const tagsList = computed(() => {
+  const t = (props as any).task?.tags
+  if (!t) return [] as Tag[]
+  return Array.isArray(t) ? t as Tag[] : [t as Tag]
+})
 
 // Deadline status
 const deadlineStatus = computed(() => {
@@ -107,10 +119,10 @@ const deadlineClass = computed(() => {
       </div>
 
       <!-- Tags -->
-      <div v-if="task.tags && task.tags.length > 0" class="task-tags">
+      <div v-if="tagsList.length > 0" class="task-tags">
         <span 
-          v-for="tag in task.tags" 
-          :key="tag"
+          v-for="(tag, idx) in tagsList" 
+          :key="`${tag}-${idx}`"
           class="tag"
         >
           {{ getTagLabel(tag) }}

@@ -114,14 +114,69 @@
 }
 
 .filter-btn:hover {
-  border-color: var(--primary-color);
+  border-color: var(--accent-color);
   background: var(--hover-bg);
 }
 
 .filter-btn.active {
-  background: var(--primary-color);
-  border-color: var(--primary-color);
+  background: var(--accent-color);
+  border-color: var(--accent-color);
   color: white;
+}
+
+/* Controls row: places filter and sort side-by-side on wide screens */
+.controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0.5rem 0 1rem 0;
+  flex-wrap: wrap;
+}
+
+.controls-row .filter-section {
+  margin: 0; /* remove the extra margin when inside the row */
+}
+
+.controls-row .sort-section {
+  margin: 0; /* keep aligned with filter */
+}
+
+/* Sort controls (auto-apply) */
+.sort-section {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1rem 0 0.75rem 0;
+  flex-wrap: wrap;
+}
+
+.sort-section label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-right: 0.25rem;
+}
+
+.sort-section select {
+  padding: 0.5rem 0.6rem;
+  border: 2px solid var(--sidebar-border);
+  background: var(--card-bg);
+  color: var(--text-color);
+  border-radius: 8px;
+  min-width: 160px;
+  transition: all 0.15s ease-in-out;
+}
+
+.sort-section select:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.sort-info {
+  margin-bottom: 0.75rem;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
 }
 
 /* Responsive */
@@ -132,6 +187,17 @@
 
   .view-container h1 {
     font-size: 1.75rem;
+  }
+}
+
+/* Stack controls on small screens */
+@media (max-width: 720px) {
+  .controls-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .controls-row .filter-section {
+    margin-bottom: 0.75rem;
   }
 }
 

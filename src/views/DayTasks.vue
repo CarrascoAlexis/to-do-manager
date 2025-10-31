@@ -59,8 +59,8 @@ const handleStatusChange = (task: Task, newStatus: number) => {
 
 <template>
   <div class="view-container">
-    <h1>📅 Today's Tasks</h1>
-    <p v-if="tasks.length === 0" class="empty-message">No tasks due today. Enjoy your day! 🎉</p>
+  <h1>📅 Today's Tasks</h1>
+  <p v-if="tasks.length === 0" class="empty-message">No tasks due today. Enjoy your day! 🎉</p>
     <div v-else class="tasks-list">
       <TaskCard
         v-for="task in tasks"

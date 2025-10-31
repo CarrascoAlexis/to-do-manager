@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import type { Task } from '@/resources/tasks'
 import { loadTasksForHome, saveAllTasks } from '@/resources/tasks'
 import TaskCard from '@/components/TaskCard.vue'
@@ -12,9 +12,18 @@ const isModalOpen = ref(false)
 const filter = ref<{ searchTerm?: string; status?: number }>({})
 const activeFilter = ref<number | 'all'>('all')
 
+// Sorting controls
+const sortBy = ref<'deadline' | 'createdAt' | 'updatedAt'>('deadline')
+const sortOrder = ref<'asc' | 'desc'>('asc')
+
 const loadTasksData = () => {
-  tasks.value = loadTasksForHome(filter.value)
+  tasks.value = loadTasksForHome(filter.value, sortBy.value, sortOrder.value)
 }
+
+// Auto-apply sorting when control values change
+watch([sortBy, sortOrder], () => {
+  loadTasksData()
+})
 
 const setStatusFilter = (status: number | 'all') => {
   activeFilter.value = status
@@ -74,41 +83,62 @@ function handleStatusChange(task: Task, newStatus: number) {
       <p>Welcome to your task manager!</p>
     </div>
 
-    <!-- Filter Buttons -->
-    <div class="filter-section">
-      <button 
-        :class="['filter-btn', { active: activeFilter === 'all' }]"
-        @click="setStatusFilter('all')"
-      >
-        All
-      </button>
-      <button 
-        :class="['filter-btn', { active: activeFilter === 0 }]"
-        @click="setStatusFilter(0)"
-      >
-        To Do
-      </button>
-      <button 
-        :class="['filter-btn', { active: activeFilter === 1 }]"
-        @click="setStatusFilter(1)"
-      >
-        In Progress
-      </button>
-      <button 
-        :class="['filter-btn', { active: activeFilter === 2 }]"
-        @click="setStatusFilter(2)"
-      >
-        Done
-      </button>
-      <button 
-        :class="['filter-btn', { active: activeFilter === 3 }]"
-        @click="setStatusFilter(3)"
-      >
-        Cancelled
-      </button>
+    <!-- Controls: Filter buttons and Sort controls (responsive wrapper) -->
+    <div class="controls-row">
+      <div class="filter-section">
+        <button 
+          :class="['filter-btn', { active: activeFilter === 'all' }]"
+          @click="setStatusFilter('all')"
+        >
+          All
+        </button>
+        <button 
+          :class="['filter-btn', { active: activeFilter === 0 }]"
+          @click="setStatusFilter(0)"
+        >
+          To Do
+        </button>
+        <button 
+          :class="['filter-btn', { active: activeFilter === 1 }]"
+          @click="setStatusFilter(1)"
+        >
+          In Progress
+        </button>
+        <button 
+          :class="['filter-btn', { active: activeFilter === 2 }]"
+          @click="setStatusFilter(2)"
+        >
+          Done
+        </button>
+        <button 
+          :class="['filter-btn', { active: activeFilter === 3 }]"
+          @click="setStatusFilter(3)"
+        >
+          Cancelled
+        </button>
+      </div>
+
+      <div class="sort-section">
+        <label for="sort-field">Sort by</label>
+        <select id="sort-field" v-model="sortBy">
+          <option value="deadline">Deadline</option>
+          <option value="createdAt">Creation date</option>
+          <option value="updatedAt">Edit date</option>
+        </select>
+
+        <label for="sort-order">Order</label>
+        <select id="sort-order" v-model="sortOrder">
+          <option value="asc">Ascending</option>
+          <option value="desc">Descending</option>
+        </select>
+
+        <!-- Apply is now automatic when selects change -->
+      </div>
     </div>
 
     <div class="tasks-section">
+          <!-- Apply is now automatic when selects change -->
+      <div class="sort-info">Currently sorting by <strong>{{ sortBy }}</strong> (<em>{{ sortOrder }}</em>)</div>
       <div v-if="tasks.length === 0" class="empty-state">
         <p v-if="activeFilter === 'all'">No tasks yet. Create your first task to get started!</p>
         <p v-else>No tasks found with this status filter.</p>

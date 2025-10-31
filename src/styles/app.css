@@ -1,4 +1,19 @@
-/* App-level styles (moved from App.vue) */
+/*
+  app.css — App-level styles
+
+  Purpose:
+  - Centralized layout styles for the application shell (app container, main content).
+  - Uses CSS custom properties (theme variables) to adapt automatically to the active theme.
+
+  Notes for contributors:
+  - Theme variables (for example --bg-color, --text-color, --accent-color) are defined in
+    `src/styles/themes.css` (and some fallbacks in `src/styles/global.css`). Prefer using
+    these variables instead of hard-coded colors so the UI respects the selected theme.
+  - Keep layout-only rules here. Component-specific styles belong in their component CSS
+    files (e.g., `src/styles/task-card.css`, `src/styles/sidebar.css`).
+  - This file is imported at app bootstrap (see `src/main.ts`). If you need to add global
+    utilities or helper classes, add them here with clear comments.
+*/
 .app-container {
   display: flex;
   min-height: 100vh;

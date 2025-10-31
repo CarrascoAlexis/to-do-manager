@@ -1,3 +1,17 @@
+  /*
+    themes.css — Theme variable definitions
+
+    Purpose:
+    - Central location for theme CSS custom properties (variables) used across the app.
+    - Each `.theme-<name>` class sets a group of variables (colors, sidebar colors, accents)
+      that components consume (for example `--bg-color`, `--text-color`, `--accent-color`).
+
+    Notes for contributors:
+    - When adding a new theme, add a `.theme-<name>` block here with the same variable
+      keys so the rest of the UI automatically adapts.
+    - Avoid hard-coded colors in components; prefer using these variables for themeable UI.
+  */
+
 /* Theme variables and theme classes (extracted from global.css) */
 :root {
   /* Default / light */

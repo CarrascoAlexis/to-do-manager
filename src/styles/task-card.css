@@ -1,3 +1,15 @@
+/*
+  task-card.css — TaskCard component styles
+
+  Purpose:
+  - Visual styling for individual task cards (status badge, title, tags, dates, actions).
+  - Keeps layout, spacing and responsive adjustments local to the TaskCard component.
+
+  Notes:
+  - Use theme variables (e.g., --text-color, --tag-bg) where possible to ensure theme
+    compatibility. Component-specific variables can be added here if needed.
+*/
+
 /* Task Card Component Styles */
 
 .task-card {
@@ -18,7 +30,7 @@
 
 .task-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start; /* align children to the top for a tidy row layout */
   gap: 1rem;
   flex-wrap: wrap;
 }
@@ -26,6 +38,7 @@
 /* Status Badge */
 .task-status {
   flex-shrink: 0;
+  align-self: flex-start; /* ensure the status badge stays aligned with title */
 }
 
 .status-badge {
@@ -89,6 +102,7 @@
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+  align-self: flex-start; /* keep tags aligned to the top of the card */
 }
 
 .tag {
@@ -109,6 +123,8 @@
   font-size: 0.75rem;
   color: var(--text-secondary);
   min-width: 140px;
+  align-items: flex-end; /* right-align date labels/values for neat columns */
+  text-align: right;
 }
 
 .date-item {
@@ -180,6 +196,7 @@
   display: flex;
   gap: 0.5rem;
   flex-shrink: 0;
+  align-self: flex-start; /* keep action buttons vertically aligned with title */
 }
 
 .action-btn {
@@ -254,7 +271,7 @@
 /* Dark mode adjustments */
 @media (prefers-color-scheme: dark) {
   .task-card:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 8px var(--nav-active-bg);
   }
 
   .status-todo {

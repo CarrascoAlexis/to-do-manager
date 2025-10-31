@@ -38,7 +38,7 @@ enum Status {
  * @property {number} URGENT - Urgent priority task
  * @property {number} LOW_PRIORITY - Low priority task
  */
-enum Tags {
+enum Tag {
     WORK,
     PERSONAL,
     URGENT,
@@ -55,7 +55,7 @@ enum Tags {
  * @property {Date} createdAt - Timestamp when the task was created
  * @property {Date} updatedAt - Timestamp when the task was last modified
  * @property {Date} [deadline] - Optional deadline date for task completion
- * @property {Tags[]} [tags] - Optional array of tags for task categorization
+ * @property {Tag[]} [tags] - Optional array of tags for task categorization
  */
 interface Task {
     id: ID;
@@ -65,7 +65,7 @@ interface Task {
     createdAt: Date;
     updatedAt: Date;
     deadline?: Date;
-    tags?: Tags[];
+    tags?: Tag[];
 }
 
 
@@ -113,7 +113,7 @@ function loadTasks(): Task[] {
                 createdAt: new Date(task.createdAt),
                 updatedAt: new Date(task.updatedAt),
                 deadline: task.deadline ? new Date(task.deadline) : undefined,
-                tags: task.tags ? task.tags.map((tag: string) => Tags[tag as keyof typeof Tags]) : []
+                tags: task.tags ? task.tags.map((tag: string) => Tag[tag as keyof typeof Tag]) : []
             };
             taskList.push(taskItem);
         }
@@ -185,7 +185,8 @@ function loadArchivedTasks(): Task[] {
  * @param {Object} filter - Filtering criteria for tasks
  * @param {string} [filter.searchTerm] - Optional search term to match against task titles
  * @param {Status} [filter.status] - Optional status filter to show only tasks with specific status
- * @param {'createdAt' | 'updatedAt' | 'deadline'} [sortBy='deadline'] - Field to sort by (currently unused, sorts by createdAt)
+ * @param {'createdAt' | 'updatedAt' | 'deadline'} [sortBy='deadline'] - Field to sort by
+ * @param {'asc' | 'desc'} [sortOrder='asc'] - Sort order: 'asc' for ascending (croissant), 'desc' for descending (decroissant)
  * 
  * @returns {Task[]} A filtered and sorted array of tasks. Returns all tasks if no filters applied.
  * 
@@ -214,13 +215,34 @@ function loadArchivedTasks(): Task[] {
  *   status: Status.TODO 
  * });
  */
-function loadTasksForHome(filter: { searchTerm?: string; status?: Status }, sortBy: 'createdAt' | 'updatedAt' | 'deadline' = 'deadline'): Task[] {
+function loadTasksForHome(
+    filter: { searchTerm?: string; status?: Status },
+    sortBy: 'createdAt' | 'updatedAt' | 'deadline' = 'deadline',
+    sortOrder: 'asc' | 'desc' = 'asc'
+): Task[] {
     const allTasks = loadTasks();
+
+    // Sort first to ensure deterministic ordering before filtering
+    const getTimeValue = (task: Task) => {
+        const value = (task as any)[sortBy] as Date | undefined
+        // For missing deadlines, treat as +Infinity when sorting ascending so they appear last
+        if (!value) return sortBy === 'deadline' ? Infinity : 0
+        return value.getTime()
+    }
+
+    allTasks.sort((a, b) => {
+        const ta = getTimeValue(a)
+        const tb = getTimeValue(b)
+        const diff = ta - tb
+        return sortOrder === 'asc' ? diff : -diff
+    })
+
+    // Then apply filters
     return allTasks.filter(task => {
         const matchesSearchTerm = filter.searchTerm ? task.title.includes(filter.searchTerm) : true;
         const matchesStatus = filter.status !== undefined ? task.status === filter.status : true;
         return matchesSearchTerm && matchesStatus;
-    }).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    })
 }
 
 /**
@@ -278,7 +300,7 @@ function saveAllTasks(tasks: Task[]): void {
  *   createdAt: new Date(),
  *   updatedAt: new Date(),
  *   deadline: new Date('2025-11-15'),
- *   tags: [Tags.WORK, Tags.URGENT]
+ *   tags: [Tag.WORK, Tag.URGENT]
  * };
  * addTask(newTask);
  */
@@ -290,4 +312,4 @@ function addTask(task: Task): void {
 
 
 export type { ID, Task };
-export { Status, loadTasks, addTask, saveAllTasks, loadTodayTasks, loadArchivedTasks, loadTasksForHome };
+export { Status, Tag, loadTasks, addTask, saveAllTasks, loadTodayTasks, loadArchivedTasks, loadTasksForHome };

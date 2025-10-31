@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import type { Task } from '@/resources/tasks'
 
 interface Props {
@@ -120,6 +120,43 @@ const handleBackgroundClick = (e: MouseEvent) => {
     emit('close')
   }
 }
+
+// Status menu (change status dropdown)
+const statusMenuOpen = ref(false)
+const statusBtnRef = ref<HTMLElement | null>(null)
+const statusMenuRef = ref<HTMLElement | null>(null)
+
+const statuses = [
+  { id: 0, label: 'To Do' },
+  { id: 1, label: 'In Progress' },
+  { id: 2, label: 'Done' },
+  { id: 3, label: 'Cancelled' },
+  { id: 4, label: 'Archived' }
+]
+
+function toggleStatusMenu() { statusMenuOpen.value = !statusMenuOpen.value }
+function selectStatus(newStatus: number) {
+  if (!props.task) return
+  emit('statusChange', props.task, newStatus)
+  props.task.status = newStatus // Update local task status for immediate UI feedback
+  statusMenuOpen.value = false
+}
+
+function onDocClick(e: MouseEvent) {
+  const btn = statusBtnRef.value
+  const menu = statusMenuRef.value
+  if (!btn || !menu) return
+  if (btn.contains(e.target as Node) || menu.contains(e.target as Node)) return
+  statusMenuOpen.value = false
+}
+
+onMounted(() => {
+  document.addEventListener('click', onDocClick)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', onDocClick)
+})
 </script>
 
 <template>
@@ -202,6 +239,24 @@ const handleBackgroundClick = (e: MouseEvent) => {
           <button class="btn btn-secondary" @click="emit('close')">
             Close
           </button>
+          <div class="status-dropdown" ref="statusBtnRef">
+            <button class="btn btn-secondary" @click="toggleStatusMenu" :aria-expanded="statusMenuOpen" type="button">
+              Change status: {{ statusLabel }}
+            </button>
+
+            <div v-if="statusMenuOpen" class="status-menu" ref="statusMenuRef" role="menu" aria-label="Change status">
+              <button
+                v-for="s in statuses"
+                :key="s.id"
+                class="status-option"
+                @click="selectStatus(s.id)"
+                :aria-pressed="task && task.status === s.id"
+                role="menuitemradio"
+              >
+                {{ s.label }}
+              </button>
+            </div>
+          </div>
           <button class="btn btn-primary" @click="emit('edit', task)">
             ✏️ Edit
           </button>

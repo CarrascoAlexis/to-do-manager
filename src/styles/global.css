@@ -1,3 +1,16 @@
+/*
+  global.css — Base/global styles
+
+  Purpose:
+  - Provides resets, base typography, and default CSS custom properties fallbacks.
+  - Includes a small dark-mode fallback when no explicit `.theme-...` class is present.
+
+  Notes for contributors:
+  - Prefer theme variables (defined in `src/styles/themes.css`) over hard-coded colors.
+  - Keep global utilities and base resets here. Component-level styles should remain in
+    component or module CSS files (e.g., `src/styles/task-card.css`).
+*/
+
 /* Reset and base styles */
 *,
 *::before,

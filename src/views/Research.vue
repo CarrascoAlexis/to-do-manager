@@ -12,6 +12,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import TaskCard from '../components/TaskCard.vue'
 import TaskModal from '../components/TaskModal.vue'
 import HeaderSection from '@/components/HeaderSection.vue'
+import KanbanBoard from '@/components/KanbanBoard.vue'
 import type { Task } from '../resources/tasks'
 import { loadTasks, saveAllTasks } from '../resources/tasks'
 
@@ -21,6 +22,9 @@ const filter = ref<{ status?: number; searchTerm?: string }>({})
 const activeFilter = ref<number | 'all'>('all')
 const sortBy = ref<'deadline' | 'createdAt' | 'updatedAt'>('deadline')
 const sortOrder = ref<'asc' | 'desc'>('asc')
+const view = ref<'list' | 'kanban'>('list')
+const dateFilter = ref<'all' | 'overdue' | 'today' | 'soon' | 'future'>('all')
+const filterAnim = ref(false)
 const selectedTask = ref<Task | null>(null)
 const isModalOpen = ref(false)
 const selectedIsEdit = ref(false)
@@ -49,11 +53,37 @@ const filteredTasks = computed(() => {
   return list
 })
 
+const kanbanTasks = computed(() => {
+  if (view.value !== 'kanban') return filteredTasks.value
+  const all = loadTasks()
+  if (dateFilter.value === 'all') return all
+  const now = new Date(); now.setHours(0,0,0,0)
+  return all.filter(t => {
+    if (!t.deadline) return false
+    const dd = new Date(t.deadline); dd.setHours(0,0,0,0)
+    const diff = Math.ceil((dd.getTime() - now.getTime()) / (1000*60*60*24))
+    if (dateFilter.value === 'overdue') return diff < 0
+    if (dateFilter.value === 'today') return diff === 0
+    if (dateFilter.value === 'soon') return diff > 0 && diff <= 3
+    if (dateFilter.value === 'future') return diff > 3
+    return true
+  })
+})
+
 const loadTasksData = () => {
   tasks.value = loadTasks()
 }
 
 onMounted(() => {
+  // load saved view preference
+  try {
+    const saved = localStorage.getItem('tasks:viewMode')
+    if (saved === 'kanban' || saved === 'list') view.value = saved
+    const savedDate = localStorage.getItem('tasks:dateFilter')
+    if (savedDate === 'all' || savedDate === 'overdue' || savedDate === 'today' || savedDate === 'soon' || savedDate === 'future') {
+      dateFilter.value = savedDate as any
+    }
+  } catch (err) { /* ignore */ }
   loadTasksData()
   window.addEventListener('tasks-updated', loadTasksData)
 })
@@ -90,6 +120,18 @@ function onUpdateSortOrder(v: 'asc' | 'desc') {
   sortOrder.value = v
 }
 
+function onUpdateView(v: 'list' | 'kanban') {
+  view.value = v
+  try { localStorage.setItem('tasks:viewMode', v) } catch (err) { /* ignore */ }
+}
+
+function onUpdateDateFilter(v: 'all' | 'overdue' | 'today' | 'soon' | 'future') {
+  dateFilter.value = v
+  try { localStorage.setItem('tasks:dateFilter', v) } catch (err) { /* ignore */ }
+  filterAnim.value = true
+  setTimeout(() => { filterAnim.value = false }, 600)
+}
+
 const handleTaskClick = (task: Task) => {
   selectedTask.value = task
   isModalOpen.value = true
@@ -122,8 +164,10 @@ const handleTaskEdit = (task: Task) => {
 
 const handleTaskDelete = (task: Task) => {
   console.log('Delete task:', task)
-  const updatedTasks = tasks.value.filter(t => t.id !== task.id)
-  saveAllTasks(updatedTasks)
+  // Remove from the persistent store rather than only the filtered in-memory list
+  const all = loadTasks()
+  const updated = all.filter(t => t.id !== task.id)
+  saveAllTasks(updated)
   loadTasksData()
   handleCloseModal()
 }
@@ -144,17 +188,20 @@ const handleStatusChange = (task: Task, newStatus: number) => {
   <!-- Research view template: search-first view showing filtered results -->
   <div class="view-container">
     <HeaderSection
-      title="🔍 Research"
+      titleIcon="search"
       :search="searchQuery"
       :activeFilter="activeFilter"
       :sortBy="sortBy"
       :sortOrder="sortOrder"
+      :dateFilter="dateFilter"
       statusMode="dropdown"
-  @update:search="onUpdateSearchFromHeader"
+      :view="view"
+      @update:search="onUpdateSearchFromHeader"
       @update:activeFilter="onUpdateActiveFilter"
       @update:sortBy="onUpdateSortBy"
       @update:sortOrder="onUpdateSortOrder"
-      @update:view="(v) => console.log('View change:', v)"
+        @update:view="onUpdateView"
+        @update:dateFilter="onUpdateDateFilter"
     />
 
     <div v-if="filteredTasks.length === 0" class="empty-message">
@@ -162,17 +209,30 @@ const handleStatusChange = (task: Task, newStatus: number) => {
       <p v-else>No tasks available. Create your first task to get started!</p>
     </div>
     
-    <div v-else class="tasks-list">
-      <TaskCard
-        v-for="task in filteredTasks"
-        :key="task.id"
-        :task="task"
-        :show-description="true"
-        @click="handleTaskClick"
-        @edit="openEditModal"
-        @delete="handleTaskDelete"
-        @status-change="handleStatusChange"
-      />
+  <div v-else :class="{ 'filter-apply-anim': filterAnim }">
+      <div v-if="view === 'list'" class="tasks-list">
+        <TaskCard
+          v-for="task in filteredTasks"
+          :key="task.id"
+          :task="task"
+          :show-description="true"
+          @click="handleTaskClick"
+          @edit="openEditModal"
+          @delete="handleTaskDelete"
+          @status-change="handleStatusChange"
+        />
+      </div>
+
+      <div v-else>
+        <KanbanBoard
+          :tasks="kanbanTasks"
+          :show-description="true"
+          @click="handleTaskClick"
+          @edit="openEditModal"
+          @delete="handleTaskDelete"
+          @status-change="handleStatusChange"
+        />
+      </div>
     </div>
 
     <!-- Task Modal -->

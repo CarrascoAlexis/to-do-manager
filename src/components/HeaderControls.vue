@@ -1,38 +1,67 @@
 <script setup lang="ts">
 import FiltersBar from './FiltersBar.vue'
-import { defineProps, defineEmits } from 'vue'
+import Icon from './Icon.vue'
+import { defineProps, defineEmits, ref, watch } from 'vue'
 
 const props = defineProps({
   search: { type: String, default: '' },
-  title: { type: String, default: '' },
   activeFilter: { type: [Number, String], default: 'all' },
   sortBy: { type: String as () => 'deadline' | 'createdAt' | 'updatedAt', default: 'deadline' },
   sortOrder: { type: String as () => 'asc' | 'desc', default: 'asc' },
   statusMode: { type: String as () => 'buttons' | 'dropdown', default: 'dropdown' },
   view: { type: String as () => 'list' | 'kanban', default: 'list' }
+  ,
+  dateFilter: { type: String as () => 'all' | 'overdue' | 'today' | 'soon' | 'future', default: 'all' },
+  titleIcon: { type: String, default: '' }
+  
 })
 
-const emit = defineEmits(['update:search', 'update:activeFilter', 'update:sortBy', 'update:sortOrder', 'update:view'])
+const emit = defineEmits(['update:search', 'update:activeFilter', 'update:sortBy', 'update:sortOrder', 'update:view', 'update:dateFilter'])
+
+const pulse = ref(false)
+// watch the incoming dateFilter prop and trigger a short pulse animation on the badge when set
+watch(() => props.dateFilter, (val, oldVal) => {
+  if (val && val !== 'all' && val !== oldVal) {
+    pulse.value = true
+    setTimeout(() => { pulse.value = false }, 700)
+  }
+})
+
+function clearDate() {
+  // emit a request to clear the date filter (set to 'all')
+  emit('update:dateFilter', 'all')
+}
 
 function onSearch(e: Event) {
   const v = (e.target as HTMLInputElement).value
   emit('update:search', v)
 }
+
+function getDateLabel(v: string) {
+  const map: Record<string,string> = {
+    overdue: 'Overdue',
+    today: 'Today',
+    soon: 'Soon',
+    future: 'Future'
+  }
+  return map[v] || ''
+}
 </script>
 
 <template>
   <div class="header-controls">
-    <div class="header-title" v-if="title">
-      <h1 class="header-title-text" v-text="title"></h1>
-      <div class="title-divider" aria-hidden="true"></div>
-    </div>
+        <div class="header-title" v-if="titleIcon">
+          <span class="header-icon" aria-hidden="true">
+            <Icon :name="titleIcon" :size="18" />
+          </span>
+
+          <button v-if="dateFilter && dateFilter !== 'all'" type="button" class="date-badge" :class="{ 'badge-animate': pulse }" :title="getDateLabel(dateFilter)" @click="clearDate" aria-label="Clear date filter">
+            {{ getDateLabel(dateFilter) }}
+          </button>
+        </div>
     <div class="search-wrapper" role="search">
       <span class="search-icon" aria-hidden="true">
-        <!-- simple magnifier SVG -->
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="11" cy="11" r="6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
+        <Icon name="search" :size="16" />
       </span>
 
       <input
@@ -44,25 +73,26 @@ function onSearch(e: Event) {
       />
     </div>
 
-    <div class="controls-divider" aria-hidden="true"></div>
-
     <div class="right-controls" role="toolbar" aria-label="Filters and view">
       <FiltersBar
         :activeFilter="activeFilter"
         :sortBy="sortBy"
         :sortOrder="sortOrder"
         :statusMode="statusMode"
+        :showStatus="view !== 'kanban'"
+        :showDateFilter="view === 'kanban'"
         @update:activeFilter="$emit('update:activeFilter', $event)"
+        @update:dateFilter="$emit('update:dateFilter', $event)"
         @update:sortBy="$emit('update:sortBy', $event)"
         @update:sortOrder="$emit('update:sortOrder', $event)"
       />
 
       <div class="view-toggle" role="tablist" aria-label="View toggle">
         <button class="view-btn" :class="{ active: view === 'list' }" @click="$emit('update:view', 'list')" :aria-pressed="view === 'list'" title="List view">
-          📋
+          <Icon name="list" :size="16" />
         </button>
         <button class="view-btn" :class="{ active: view === 'kanban' }" @click="$emit('update:view', 'kanban')" :aria-pressed="view === 'kanban'" title="Kanban view">
-          🗂️
+          <Icon name="kanban" :size="16" />
         </button>
       </div>
     </div>
@@ -95,6 +125,7 @@ function onSearch(e: Event) {
   text-overflow: ellipsis;
 }
 
+
 .title-divider {
   width: 1px;
   height: 26px;
@@ -108,14 +139,6 @@ function onSearch(e: Event) {
   justify-content: center;
   color: var(--text-secondary);
   padding-left: 0.25rem;
-}
-
-.controls-divider {
-  width: 1px;
-  height: 28px;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.06), rgba(0,0,0,0.02));
-  margin: 0 0.6rem;
-  border-radius: 1px;
 }
 
 .view-toggle {
@@ -151,6 +174,38 @@ function onSearch(e: Event) {
   align-items: center;
   gap: 0.6rem;
   margin-left: auto; /* push this group to the far right */
+}
+
+.date-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-color);
+  color: var(--on-accent, #fff);
+  font-size: 0.75rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  margin-left: 0.5rem;
+  white-space: nowrap;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.badge-animate {
+  animation: badge-pop 700ms cubic-bezier(.2,.9,.2,1);
+}
+
+@keyframes badge-pop {
+  0% { transform: scale(.92); opacity: 0 }
+  60% { transform: scale(1.06); opacity: 1 }
+  100% { transform: scale(1); opacity: 1 }
+}
+
+.date-badge:hover {
+  transform: translateY(-1px) scale(1.03);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.08);
 }
 
 /* ensure FiltersBar's controls-row can shrink inside the right-controls container */

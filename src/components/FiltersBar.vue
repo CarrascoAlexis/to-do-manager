@@ -6,6 +6,8 @@ const props = defineProps({
   sortBy: { type: String as () => 'deadline' | 'createdAt' | 'updatedAt', default: 'deadline' },
   sortOrder: { type: String as () => 'asc' | 'desc', default: 'asc' },
   showStatus: { type: Boolean, default: true },
+  showDateFilter: { type: Boolean, default: false },
+  dateFilter: { type: String as () => 'all' | 'overdue' | 'today' | 'soon' | 'future', default: 'all' },
   showSort: { type: Boolean, default: true },
   statusMode: { type: String as () => 'buttons' | 'dropdown', default: 'dropdown' }
 })
@@ -14,6 +16,7 @@ const emit = defineEmits([
   'update:activeFilter',
   'update:sortBy',
   'update:sortOrder'
+  ,'update:dateFilter'
 ])
 
 function setStatus(status: number | 'all') {
@@ -31,11 +34,16 @@ function updateSortCombined(e: Event) {
   emit('update:sortBy', by as any)
   emit('update:sortOrder', (order as any))
 }
+
+function onDateSelect(e: Event) {
+  const val = (e.target as HTMLSelectElement).value as any
+  emit('update:dateFilter', val)
+}
 </script>
 
 <template>
   <div class="controls-row">
-    <div v-if="showStatus" class="filter-section">
+  <div v-if="showStatus" class="filter-section">
       <template v-if="statusMode === 'buttons'">
         <button :class="['filter-btn', { active: activeFilter === 'all' }]" @click="setStatus('all')">All</button>
         <button :class="['filter-btn', { active: activeFilter === 0 }]" @click="setStatus(0)">To Do</button>
@@ -54,9 +62,20 @@ function updateSortCombined(e: Event) {
       </template>
     </div>
 
+    <div v-if="showDateFilter" class="filter-section">
+      <label for="date-filter-select">Date</label>
+      <select id="date-filter-select" :value="dateFilter" @change="onDateSelect">
+        <option value="all">All dates</option>
+        <option value="overdue">Overdue</option>
+        <option value="today">Today</option>
+        <option value="soon">Soon (≤3 days)</option>
+        <option value="future">Future</option>
+      </select>
+    </div>
+
     <div v-if="showSort" class="sort-section">
-      <label>Sort</label>
-      <select :value="`${sortBy}|${sortOrder}`" @change="updateSortCombined">
+      <label for="sort-select">Sort</label>
+      <select id="sort-select" :value="`${sortBy}|${sortOrder}`" @change="updateSortCombined">
         <option value="deadline|asc">Deadline ↑</option>
         <option value="deadline|desc">Deadline ↓</option>
         <option value="createdAt|asc">Creation date ↑</option>

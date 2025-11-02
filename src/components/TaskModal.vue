@@ -105,9 +105,9 @@ const deadlineClass = computed(() => {
 const deadlineLabel = computed(() => {
   if (!deadlineStatus.value) return ''
   switch (deadlineStatus.value) {
-    case 'overdue': return '⚠️ Overdue'
-    case 'today': return '📅 Today'
-    case 'soon': return '⏰ Soon'
+    case 'overdue': return 'Overdue'
+    case 'today': return 'Today'
+    case 'soon': return 'Soon'
     default: return ''
   }
 })
@@ -277,6 +277,19 @@ function toggleEditedTag(tag: number) {
                 {{ formatDateShort(task.deadline) }}
               </span>
               <span v-if="deadlineLabel" :class="['deadline-badge', deadlineClass]">
+                <svg v-if="deadlineStatus === 'overdue'" width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M12 2L2 22h20L12 2z" fill="currentColor"/>
+                  <path d="M12 8v5" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="12" cy="17" r="1" fill="#fff"/>
+                </svg>
+                <svg v-else-if="deadlineStatus === 'today'" width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5" fill="none" />
+                  <path d="M16 2v4M8 2v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                <svg v-else-if="deadlineStatus === 'soon'" width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                  <path d="M12 7v6l4 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
                 {{ deadlineLabel }}
               </span>
             </div>
@@ -357,8 +370,19 @@ function toggleEditedTag(tag: number) {
                 </button>
               </div>
             </div>
-            <button class="btn btn-primary" @click="startEdit">✏️ Edit</button>
-            <button class="btn btn-danger" @click="emit('delete', task)">🗑️ Delete</button>
+            <button class="btn btn-primary" @click="startEdit">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="margin-right:6px;vertical-align:middle;">
+                <path d="M3 21v-3.75L17.81 2.69a2 2 0 0 1 2.83 0l.67.67a2 2 0 0 1 0 2.83L6.5 21H3z" fill="currentColor"/>
+              </svg>
+              Edit
+            </button>
+            <button class="btn btn-danger" @click="emit('delete', task)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="margin-right:6px;vertical-align:middle;">
+                <path d="M3 6h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Delete
+            </button>
           </template>
           <template v-else>
             <button class="btn btn-secondary" @click="cancelEdit">Cancel</button>

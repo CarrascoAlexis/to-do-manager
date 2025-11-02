@@ -278,3 +278,23 @@
     font-size: 1.5rem;
   }
 }
+
+/* Animation used when a filter is applied to the list (subtle fade + slide) */
+.filter-apply-anim {
+  animation: filter-fade-slide 420ms cubic-bezier(.2,.9,.2,1);
+}
+
+@keyframes filter-fade-slide {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(.995);
+  }
+  60% {
+    opacity: 0.6;
+    transform: translateY(-4px) scale(1.002);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

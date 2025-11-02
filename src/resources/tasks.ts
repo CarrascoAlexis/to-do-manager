@@ -113,7 +113,22 @@ function loadTasks(): Task[] {
                 createdAt: new Date(task.createdAt),
                 updatedAt: new Date(task.updatedAt),
                 deadline: task.deadline ? new Date(task.deadline) : undefined,
-                tags: task.tags ? task.tags.map((tag: string) => Tag[tag as keyof typeof Tag]) : []
+                tags: task.tags ? (task.tags as any[]).map((tag: any) => {
+                    // Normalize tags stored as numbers or strings into numeric Tag enum values
+                    if (typeof tag === 'number') return tag as Tag
+                    if (typeof tag === 'string') {
+                        // numeric string like "0" -> 0
+                        if (/^[0-9]+$/.test(tag)) return Number(tag) as Tag
+                        // enum key like 'WORK' -> Tag.WORK
+                        const mapped = (Tag as any)[tag as string]
+                        if (typeof mapped === 'number') return mapped as Tag
+                        // try uppercase variant
+                        const up = (tag as string).toUpperCase()
+                        if ((Tag as any)[up] !== undefined) return (Tag as any)[up] as Tag
+                    }
+                    // unknown tag shape -> ignore
+                    return undefined
+                }).filter(t => t !== undefined) as Tag[] : []
             };
             taskList.push(taskItem);
         }

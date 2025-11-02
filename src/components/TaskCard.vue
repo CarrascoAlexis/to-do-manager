@@ -157,9 +157,28 @@ const deadlineClass = computed(() => {
         <div v-if="task.deadline" class="date-item deadline-item" :class="deadlineClass">
           <span class="date-label">Deadline:</span>
           <span class="date-value">{{ formatDate(task.deadline) }}</span>
-          <span v-if="deadlineStatus === 'overdue'" class="deadline-badge">⚠️ Overdue</span>
-          <span v-else-if="deadlineStatus === 'today'" class="deadline-badge">📅 Today</span>
-          <span v-else-if="deadlineStatus === 'soon'" class="deadline-badge">⏰ Soon</span>
+          <span v-if="deadlineStatus === 'overdue'" class="deadline-badge">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M12 2L2 22h20L12 2z" fill="currentColor"/>
+              <path d="M12 8v5" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="12" cy="17" r="1" fill="#fff"/>
+            </svg>
+            Overdue
+          </span>
+          <span v-else-if="deadlineStatus === 'today'" class="deadline-badge">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5" fill="none" />
+              <path d="M16 2v4M8 2v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            Today
+          </span>
+          <span v-else-if="deadlineStatus === 'soon'" class="deadline-badge">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5" fill="none"/>
+              <path d="M12 7v6l4 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Soon
+          </span>
         </div>
         <div class="date-item">
           <span class="date-label">Created:</span>

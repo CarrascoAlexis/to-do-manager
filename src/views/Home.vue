@@ -10,12 +10,13 @@
 // - openEditModal(task) -> open modal pre-filled for editing
 // - handleTaskEdit(task) -> save edited task back to storage
 // - header emits update:search / update:activeFilter / update:sortBy / update:sortOrder
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted, computed } from 'vue'
 import type { Task } from '@/resources/tasks'
-import { loadTasksForHome, saveAllTasks } from '@/resources/tasks'
+import { loadTasksForHome, saveAllTasks, loadTasks } from '@/resources/tasks'
 import TaskCard from '@/components/TaskCard.vue'
 import TaskModal from '@/components/TaskModal.vue'
 import HeaderSection from '@/components/HeaderSection.vue'
+import KanbanBoard from '@/components/KanbanBoard.vue'
 
 const tasks = ref<Task[]>([])
 const selectedTask = ref<Task | null>(null)
@@ -28,10 +29,30 @@ const activeFilter = ref<number | 'all'>('all')
 // Sorting controls
 const sortBy = ref<'deadline' | 'createdAt' | 'updatedAt'>('deadline')
 const sortOrder = ref<'asc' | 'desc'>('asc')
+const view = ref<'list' | 'kanban'>('list')
+const dateFilter = ref<'all' | 'overdue' | 'today' | 'soon' | 'future'>('all')
+const filterAnim = ref(false)
 
 const loadTasksData = () => {
   tasks.value = loadTasksForHome(filter.value, sortBy.value, sortOrder.value)
 }
+
+const kanbanTasks = computed(() => {
+  if (view.value !== 'kanban') return tasks.value
+  const all = loadTasks()
+  if (dateFilter.value === 'all') return all
+  const now = new Date(); now.setHours(0,0,0,0)
+  return all.filter(t => {
+    if (!t.deadline) return false
+    const dd = new Date(t.deadline); dd.setHours(0,0,0,0)
+    const diff = Math.ceil((dd.getTime() - now.getTime()) / (1000*60*60*24))
+    if (dateFilter.value === 'overdue') return diff < 0
+    if (dateFilter.value === 'today') return diff === 0
+    if (dateFilter.value === 'soon') return diff > 0 && diff <= 3
+    if (dateFilter.value === 'future') return diff > 3
+    return true
+  })
+})
 
 // Auto-apply sorting when control values change
 watch([sortBy, sortOrder], () => {
@@ -51,6 +72,15 @@ const setStatusFilter = (status: number | 'all') => {
 loadTasksData()
 
 onMounted(() => {
+  // load saved view preference from localStorage
+  try {
+    const saved = localStorage.getItem('tasks:viewMode')
+    if (saved === 'kanban' || saved === 'list') view.value = saved
+    const savedDate = localStorage.getItem('tasks:dateFilter')
+    if (savedDate === 'all' || savedDate === 'overdue' || savedDate === 'today' || savedDate === 'soon' || savedDate === 'future') {
+      dateFilter.value = savedDate as any
+    }
+  } catch (err) { /* ignore */ }
   window.addEventListener('tasks-updated', loadTasksData)
 })
 
@@ -93,7 +123,9 @@ function handleTaskEdit(task: Task) {
 
 function handleTaskDelete(task: Task) {
   console.log('Delete task:', task)
-  const updatedTasks = tasks.value.filter(t => t.id !== task.id)
+  // Ensure we remove the task from the full stored task list (not only the currently-visible filtered list)
+  const all = loadTasks()
+  const updatedTasks = all.filter(t => t.id !== task.id)
   saveAllTasks(updatedTasks)
   loadTasksData()
   handleCloseModal()
@@ -132,43 +164,72 @@ function onUpdateSortOrder(v: 'asc' | 'desc') {
   sortOrder.value = v
   // watch on [sortBy, sortOrder] will reload
 }
+
+function onUpdateView(v: 'list' | 'kanban') {
+  view.value = v
+  try { localStorage.setItem('tasks:viewMode', v) } catch (err) { /* ignore */ }
+}
+
+function onUpdateDateFilter(v: 'all' | 'overdue' | 'today' | 'soon' | 'future') {
+  dateFilter.value = v
+  try { localStorage.setItem('tasks:dateFilter', v) } catch (err) { /* ignore */ }
+  // trigger a brief animation on the list to indicate the filter was applied
+  filterAnim.value = true
+  setTimeout(() => { filterAnim.value = false }, 600)
+}
 </script>
 
 <template>
   <!-- Home view template: lists tasks and includes the shared HeaderSection -->
   <div class="view-container">
     <HeaderSection
-      title="🏠 Home"
+      titleIcon="home"
       :search="filter.searchTerm"
       :activeFilter="activeFilter"
       :sortBy="sortBy"
       :sortOrder="sortOrder"
+      :dateFilter="dateFilter"
       statusMode="dropdown"
+      :view="view"
       @update:search="onUpdateSearch"
       @update:activeFilter="onUpdateActiveFilter"
       @update:sortBy="onUpdateSortBy"
       @update:sortOrder="onUpdateSortOrder"
-      @update:view="(v) => console.log('View change:', v)"
+      @update:view="onUpdateView"
+      @update:dateFilter="onUpdateDateFilter"
     />
 
-    <div class="tasks-section">
-          <!-- Apply is now automatic when selects change -->
+  <div class="tasks-section" :class="{ 'filter-apply-anim': filterAnim }">
+      <!-- Apply is now automatic when selects change -->
       <div v-if="tasks.length === 0" class="empty-state">
         <p v-if="activeFilter === 'all'">No tasks yet. Create your first task to get started!</p>
         <p v-else>No tasks found with this status filter.</p>
       </div>
 
-      <div v-else class="tasks-list">
-        <TaskCard
-          v-for="task in tasks"
-          :key="task.id"
-          :task="task"
-          :show-description="true"
-          @click="handleTaskClick"
-          @edit="openEditModal"
-          @delete="handleTaskDelete"
-          @status-change="handleStatusChange"
-        />
+      <div v-else>
+        <div v-if="view === 'list'" class="tasks-list">
+          <TaskCard
+            v-for="task in tasks"
+            :key="task.id"
+            :task="task"
+            :show-description="true"
+            @click="handleTaskClick"
+            @edit="openEditModal"
+            @delete="handleTaskDelete"
+            @status-change="handleStatusChange"
+          />
+        </div>
+
+        <div v-else>
+          <KanbanBoard
+            :tasks="kanbanTasks"
+            :show-description="true"
+            @click="handleTaskClick"
+            @edit="openEditModal"
+            @delete="handleTaskDelete"
+            @status-change="handleStatusChange"
+          />
+        </div>
       </div>
     </div>
 

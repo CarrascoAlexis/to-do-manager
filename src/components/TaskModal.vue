@@ -1,19 +1,55 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
-import type { Task } from '@/resources/tasks'
+/**
+ * TaskModal Component
+ * 
+ * A full-screen modal for viewing and editing task details.
+ * Provides both view mode (read-only) and edit mode (form inputs) functionality.
+ * Includes form validation with visual feedback (shake animation, error messages).
+ * Supports keyboard navigation (Escape to close) and click-outside-to-close.
+ * 
+ * @component
+ * @example
+ * ```vue
+ * <TaskModal 
+ *   :task="selectedTask" 
+ *   :is-open="isModalOpen"
+ *   :open-in-edit="false"
+ *   @close="handleClose"
+ *   @edit="handleEdit"
+ *   @delete="handleDelete"
+ *   @status-change="handleStatusChange"
+ * />
+ * ```
+ */
 
-interface Props {
-  task: Task | null
-  isOpen: boolean
-}
+import { computed, ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import type { Task } from '@/composables/tasks'
+import { useTaskFormatters } from '@/composables/useTaskFormatters'
+import { useDeadlineStatus } from '@/composables/useDeadlineStatus'
+import StatusBadge from './StatusBadge.vue'
+import DeadlineBadge from './DeadlineBadge.vue'
+import TagsList from './TagsList.vue'
 
+/**
+ * Component props interface
+ */
 interface Props {
+  /** The task to display/edit, or null if modal is closed */
   task: Task | null
+  /** Controls modal visibility */
   isOpen: boolean
 }
 
 const props = defineProps<Props>()
 
+/**
+ * Component events
+ * 
+ * @event close - Emitted when the modal should be closed
+ * @event edit - Emitted when task edits are saved (includes updated task)
+ * @event delete - Emitted when delete button is clicked
+ * @event statusChange - Emitted when task status is changed via dropdown
+ */
 const emit = defineEmits<{
   close: []
   edit: [task: Task]
@@ -21,19 +57,36 @@ const emit = defineEmits<{
   statusChange: [task: Task, newStatus: number]
 }>()
 
-// Status label and class
-const statusClass = computed(() => {
-  if (!props.task) return ''
-  switch (props.task.status) {
-    case 0: return 'status-todo'
-    case 1: return 'status-in-progress'
-    case 2: return 'status-done'
-    case 3: return 'status-cancelled'
-    case 4: return 'status-archived'
-    default: return 'status-todo'
-  }
-})
+// ==========================================
+// Composables
+// ==========================================
 
+const { formatDate, formatDateShort, getTagLabel } = useTaskFormatters()
+const { getDeadlineStatus, getDeadlineClass, getDeadlineLabel } = useDeadlineStatus()
+
+// ==========================================
+// Computed Properties - Deadline
+// ==========================================
+
+/**
+ * Computes deadline status for the current task.
+ */
+const deadlineStatus = computed(() => getDeadlineStatus(props.task))
+
+/**
+ * Computes deadline CSS class for the current task.
+ */
+const deadlineClass = computed(() => getDeadlineClass(deadlineStatus.value))
+
+/**
+ * Computes deadline label for the current task.
+ */
+const deadlineLabel = computed(() => getDeadlineLabel(deadlineStatus.value))
+
+/**
+ * Returns the human-readable label for the current task status.
+ * Used in the status change dropdown button.
+ */
 const statusLabel = computed(() => {
   if (!props.task) return ''
   switch (props.task.status) {
@@ -46,91 +99,68 @@ const statusLabel = computed(() => {
   }
 })
 
-// Format date
-const formatDate = (date: Date) => {
-  return new Intl.DateTimeFormat('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(date)
-}
+// ==========================================
+// Event Handlers - Keyboard & Click
+// ==========================================
 
-const formatDateShort = (date: Date) => {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  }).format(date)
-}
-
-// Tag label mapping
-const getTagLabel = (tag: number) => {
-  const labels = ['Work', 'Personal', 'Urgent', 'Low Priority']
-  return labels[tag] || 'Unknown'
-}
-
-const getTagClass = (tag: number) => {
-  const classes = ['tag-work', 'tag-personal', 'tag-urgent', 'tag-low-priority']
-  return classes[tag] || 'tag-work'
-}
-
-// Deadline status
-const deadlineStatus = computed(() => {
-  if (!props.task?.deadline) return null
-  
-  // Don't show status indicators for completed/cancelled/archived tasks
-  const isCompletedStatus = props.task.status === 2 || props.task.status === 3 || props.task.status === 4 // DONE, CANCELLED, ARCHIVED
-  
-  if (isCompletedStatus) return null // No badge for completed tasks
-  
-  const now = new Date()
-  const deadline = props.task.deadline
-  const diffTime = deadline.getTime() - now.getTime()
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  
-  if (diffDays < 0) return 'overdue'
-  if (diffDays === 0) return 'today'
-  if (diffDays <= 3) return 'soon'
-  return 'normal'
-})
-
-const deadlineClass = computed(() => {
-  if (!deadlineStatus.value) return ''
-  return `deadline-${deadlineStatus.value}`
-})
-
-const deadlineLabel = computed(() => {
-  if (!deadlineStatus.value) return ''
-  switch (deadlineStatus.value) {
-    case 'overdue': return 'Overdue'
-    case 'today': return 'Today'
-    case 'soon': return 'Soon'
-    default: return ''
-  }
-})
-
-// Close modal on Escape key
+/**
+ * Closes the modal when Escape key is pressed.
+ * Provides keyboard navigation support.
+ * 
+ * @param e - Keyboard event
+ */
 const handleKeydown = (e: KeyboardEvent) => {
   if (e.key === 'Escape') {
     emit('close')
   }
 }
 
-// Close on background click
+/**
+ * Closes the modal when clicking outside the modal content area.
+ * Provides click-outside-to-close functionality.
+ * 
+ * @param e - Mouse event
+ */
 const handleBackgroundClick = (e: MouseEvent) => {
   if (e.target === e.currentTarget) {
     emit('close')
   }
 }
 
-// Status menu (change status dropdown)
+// ==========================================
+// Modal Focus Management
+// ==========================================
+
+/** Reference to the modal overlay for focus management */
+const modalOverlayRef = ref<HTMLElement | null>(null)
+
+/**
+ * Focuses the modal overlay when it opens to ensure keyboard events are captured
+ */
+watch(() => props.isOpen, (newVal: boolean) => {
+  if (newVal) {
+    nextTick(() => {
+      modalOverlayRef.value?.focus()
+    })
+  }
+})
+
+// ==========================================
+// Status Menu - Change Status Dropdown
+// ==========================================
+
+/** Controls the visibility of the status dropdown menu */
 const statusMenuOpen = ref(false)
+
+/** Reference to the status button element for click-outside detection */
 const statusBtnRef = ref<HTMLElement | null>(null)
+
+/** Reference to the status menu element for click-outside detection */
 const statusMenuRef = ref<HTMLElement | null>(null)
 
+/**
+ * List of all possible task statuses for the dropdown menu.
+ */
 const statuses = [
   { id: 0, label: 'To Do' },
   { id: 1, label: 'In Progress' },
@@ -139,7 +169,17 @@ const statuses = [
   { id: 4, label: 'Archived' }
 ]
 
+/**
+ * Toggles the status dropdown menu visibility.
+ */
 function toggleStatusMenu() { statusMenuOpen.value = !statusMenuOpen.value }
+
+/**
+ * Handles status selection from the dropdown menu.
+ * Updates task status locally for immediate UI feedback, then emits event.
+ * 
+ * @param newStatus - The new status ID (0-4)
+ */
 function selectStatus(newStatus: number) {
   if (!props.task) return
   emit('statusChange', props.task, newStatus)
@@ -147,6 +187,12 @@ function selectStatus(newStatus: number) {
   statusMenuOpen.value = false
 }
 
+/**
+ * Closes the status menu when clicking outside of it.
+ * Attached to document click event on mount.
+ * 
+ * @param e - Mouse event
+ */
 function onDocClick(e: MouseEvent) {
   const btn = statusBtnRef.value
   const menu = statusMenuRef.value
@@ -163,15 +209,44 @@ onUnmounted(() => {
   document.removeEventListener('click', onDocClick)
 })
 
-// Local edit mode
+// ==========================================
+// Edit Mode State
+// ==========================================
+
+/** Controls whether the modal is in edit mode (form inputs) or view mode (read-only) */
 const editing = ref(false)
+
+/** 
+ * Holds the edited task data during edit mode.
+ * Contains form values that can be modified before saving.
+ */
 const edited = ref<any>(null)
 
-// If the parent requests to open the modal already in edit mode, start editing when opened
-// (watch is imported earlier)
+// ==========================================
+// Form Validation
+// ==========================================
 
+/** 
+ * Stores validation error messages for form fields.
+ * Keys correspond to field names (e.g., 'title').
+ */
+const errors = ref<{ title?: string }>({})
 
+/** 
+ * Controls the shake animation trigger for validation feedback.
+ * Set to true briefly to trigger animation on validation failure.
+ */
+const isShaking = ref(false)
 
+// ==========================================
+// Edit Mode Functions
+// ==========================================
+
+/**
+ * Enters edit mode for the current task.
+ * Creates a shallow copy of task data with date formatting for form inputs.
+ * Clears any previous validation errors.
+ */
 function startEdit() {
   if (!props.task) return
   editing.value = true
@@ -181,16 +256,64 @@ function startEdit() {
     // convert deadline to yyyy-mm-dd string for date input
     deadline: props.task.deadline ? (props.task.deadline as Date).toISOString().slice(0,10) : undefined
   }
+  // Clear errors when starting edit
+  errors.value = {}
 }
 
+/**
+ * Cancels edit mode without saving changes.
+ * Resets edited data and clears validation errors.
+ */
 function cancelEdit() {
   editing.value = false
   edited.value = null
+  errors.value = {}
 }
 
+/**
+ * Validates the edit form before saving.
+ * Currently checks that title field is not empty.
+ * 
+ * @returns true if form is valid, false otherwise
+ */
+function validateForm(): boolean {
+  errors.value = {}
+  
+  // Check required field: title
+  if (!edited.value?.title || edited.value.title.trim() === '') {
+    errors.value.title = 'Title is required'
+    return false
+  }
+  
+  return true
+}
+
+/**
+ * Triggers the shake animation for visual feedback on validation failure.
+ * Animation lasts 600ms and resets automatically.
+ */
+function triggerShakeAnimation() {
+  isShaking.value = true
+  setTimeout(() => {
+    isShaking.value = false
+  }, 600) // Match animation duration
+}
+
+/**
+ * Saves the edited task data.
+ * Validates form, constructs updated task object, and emits edit event.
+ * Triggers shake animation if validation fails.
+ */
 function saveEdit() {
   if (!props.task || !edited.value) return
-  // construct updated task
+  
+  // Validate form
+  if (!validateForm()) {
+    triggerShakeAnimation()
+    return
+  }
+  
+  // Construct updated task object with edited values
   const updated: Task = {
     ...props.task,
     title: edited.value.title || props.task.title,
@@ -201,11 +324,18 @@ function saveEdit() {
     status: (edited.value.status as any) ?? props.task.status
   }
   emit('edit', updated)
-  // update local state
+  // Update local state and exit edit mode
   editing.value = false
   edited.value = null
+  errors.value = {}
 }
 
+/**
+ * Toggles a tag in the edited task's tags array.
+ * If tag doesn't exist, adds it. If tag exists, removes it.
+ * 
+ * @param tag - The tag number to toggle (0-3)
+ */
 function toggleEditedTag(tag: number) {
   if (!edited.value) return
   const arr = edited.value.tags as number[] | undefined
@@ -221,20 +351,24 @@ function toggleEditedTag(tag: number) {
 <template>
   <Transition name="modal">
     <div 
-      v-if="isOpen && task" 
+      v-if="isOpen && task"
+      ref="modalOverlayRef"
       class="modal-overlay"
       @click="handleBackgroundClick"
       @keydown="handleKeydown"
+      tabindex="-1"
+      role="dialog"
+      aria-modal="true"
     >
-      <div class="modal-container">
+      <div class="modal-container" :class="{ shake: isShaking }">
         <div class="modal-header">
           <template v-if="!editing">
             <h2 class="modal-title">{{ task.title }}</h2>
           </template>
           <template v-else>
-            <input class="modal-title input" v-model="edited.title" />
+            <input class="modal-title input" v-model="edited.title" aria-label="Task title" />
           </template>
-          <button class="close-button" @click="emit('close')" aria-label="Close modal">
+          <button type="button" class="close-button" @click="emit('close')" aria-label="Close modal">
             ✕
           </button>
         </div>
@@ -244,9 +378,7 @@ function toggleEditedTag(tag: number) {
           <!-- Status Badge -->
           <div class="info-section">
             <label class="info-label">Status</label>
-            <span :class="['status-badge', statusClass]">
-              {{ statusLabel }}
-            </span>
+            <StatusBadge :status="task.status" />
           </div>
 
           <!-- Description -->
@@ -258,15 +390,7 @@ function toggleEditedTag(tag: number) {
           <!-- Tags -->
           <div v-if="task.tags && task.tags.length > 0" class="info-section">
             <label class="info-label">Tags</label>
-            <div class="tags-container">
-              <span 
-                v-for="tag in task.tags" 
-                :key="tag"
-                :class="['tag', getTagClass(tag)]"
-              >
-                {{ getTagLabel(tag) }}
-              </span>
-            </div>
+            <TagsList :tags="task.tags" />
           </div>
 
           <!-- Deadline -->
@@ -276,22 +400,7 @@ function toggleEditedTag(tag: number) {
               <span :class="['deadline-date', deadlineClass]">
                 {{ formatDateShort(task.deadline) }}
               </span>
-              <span v-if="deadlineLabel" :class="['deadline-badge', deadlineClass]">
-                <svg v-if="deadlineStatus === 'overdue'" width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                  <path d="M12 2L2 22h20L12 2z" fill="currentColor"/>
-                  <path d="M12 8v5" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                  <circle cx="12" cy="17" r="1" fill="#fff"/>
-                </svg>
-                <svg v-else-if="deadlineStatus === 'today'" width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                  <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5" fill="none" />
-                  <path d="M16 2v4M8 2v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
-                <svg v-else-if="deadlineStatus === 'soon'" width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5" fill="none"/>
-                  <path d="M12 7v6l4 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                {{ deadlineLabel }}
-              </span>
+              <DeadlineBadge :status="deadlineStatus" />
             </div>
           </div>
 
@@ -315,33 +424,34 @@ function toggleEditedTag(tag: number) {
 
           <template v-else>
             <div class="info-section">
-              <label class="info-label">Title</label>
-              <input v-model="edited.title" class="input" />
+              <label for="edit-task-title" class="info-label">Title <span class="required-indicator">*</span></label>
+              <input id="edit-task-title" v-model="edited.title" class="input" :class="{ 'input-error': errors.title }" />
+              <span v-if="errors.title" class="error-message" role="alert">{{ errors.title }}</span>
             </div>
 
             <div class="info-section">
-              <label class="info-label">Description</label>
-              <textarea v-model="edited.description" class="input" rows="4"></textarea>
+              <label for="edit-task-description" class="info-label">Description</label>
+              <textarea id="edit-task-description" v-model="edited.description" class="input" rows="4"></textarea>
             </div>
 
             <div class="info-section">
-              <label class="info-label">Deadline</label>
-              <input type="date" v-model="edited.deadline" class="input" />
+              <label for="edit-task-deadline" class="info-label">Deadline</label>
+              <input id="edit-task-deadline" type="date" v-model="edited.deadline" class="input" />
             </div>
 
             <div class="info-section">
               <label class="info-label">Tags</label>
-              <div class="tags-row">
-                <button type="button" class="tag-btn" :class="{active: edited.tags && edited.tags.includes(0)}" @click="toggleEditedTag(0)">Work</button>
-                <button type="button" class="tag-btn" :class="{active: edited.tags && edited.tags.includes(1)}" @click="toggleEditedTag(1)">Personal</button>
-                <button type="button" class="tag-btn" :class="{active: edited.tags && edited.tags.includes(2)}" @click="toggleEditedTag(2)">Urgent</button>
-                <button type="button" class="tag-btn" :class="{active: edited.tags && edited.tags.includes(3)}" @click="toggleEditedTag(3)">Low</button>
+              <div class="tags-row" role="group" aria-label="Task tags selection">
+                <button type="button" class="tag-btn" :class="{active: edited.tags && edited.tags.includes(0)}" :aria-pressed="edited.tags && edited.tags.includes(0)" @click="toggleEditedTag(0)">Work</button>
+                <button type="button" class="tag-btn" :class="{active: edited.tags && edited.tags.includes(1)}" :aria-pressed="edited.tags && edited.tags.includes(1)" @click="toggleEditedTag(1)">Personal</button>
+                <button type="button" class="tag-btn" :class="{active: edited.tags && edited.tags.includes(2)}" :aria-pressed="edited.tags && edited.tags.includes(2)" @click="toggleEditedTag(2)">Urgent</button>
+                <button type="button" class="tag-btn" :class="{active: edited.tags && edited.tags.includes(3)}" :aria-pressed="edited.tags && edited.tags.includes(3)" @click="toggleEditedTag(3)">Low</button>
               </div>
             </div>
 
             <div class="info-section">
-              <label class="info-label">Status</label>
-              <select v-model.number="edited.status" class="input">
+              <label for="edit-task-status" class="info-label">Status</label>
+              <select id="edit-task-status" v-model.number="edited.status" class="input">
                 <option v-for="s in statuses" :key="s.id" :value="s.id">{{ s.label }}</option>
               </select>
             </div>
@@ -351,7 +461,7 @@ function toggleEditedTag(tag: number) {
 
         <div class="modal-footer">
           <template v-if="!editing">
-            <button class="btn btn-secondary" @click="emit('close')">Close</button>
+            <button type="button" class="btn btn-secondary" @click="emit('close')">Close</button>
             <div class="status-dropdown" ref="statusBtnRef">
               <button class="status-toggle" @click="toggleStatusMenu" :aria-expanded="statusMenuOpen" aria-haspopup="true" type="button">
                 Change status: {{ statusLabel }}
@@ -361,6 +471,7 @@ function toggleEditedTag(tag: number) {
                 <button
                   v-for="s in statuses"
                   :key="s.id"
+                  type="button"
                   class="status-option"
                   @click="selectStatus(s.id)"
                   :aria-pressed="task && task.status === s.id"
@@ -370,13 +481,13 @@ function toggleEditedTag(tag: number) {
                 </button>
               </div>
             </div>
-            <button class="btn btn-primary" @click="startEdit">
+            <button type="button" class="btn btn-primary" @click="startEdit">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="margin-right:6px;vertical-align:middle;">
                 <path d="M3 21v-3.75L17.81 2.69a2 2 0 0 1 2.83 0l.67.67a2 2 0 0 1 0 2.83L6.5 21H3z" fill="currentColor"/>
               </svg>
               Edit
             </button>
-            <button class="btn btn-danger" @click="emit('delete', task)">
+            <button type="button" class="btn btn-danger" @click="emit('delete', task)">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="margin-right:6px;vertical-align:middle;">
                 <path d="M3 6h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -385,8 +496,8 @@ function toggleEditedTag(tag: number) {
             </button>
           </template>
           <template v-else>
-            <button class="btn btn-secondary" @click="cancelEdit">Cancel</button>
-            <button class="btn btn-primary" @click="saveEdit">Save</button>
+            <button type="button" class="btn btn-secondary" @click="cancelEdit">Cancel</button>
+            <button type="button" class="btn btn-primary" @click="saveEdit">Save</button>
           </template>
         </div>
       </div>

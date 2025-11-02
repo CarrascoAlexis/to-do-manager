@@ -65,9 +65,20 @@
 }
 
 .task-card:hover {
-    box-shadow: 0 2px 8px var(--nav-active-bg);
+  box-shadow: 0 2px 8px var(--nav-active-bg);
   border-color: var(--primary-color);
   transform: translateY(-1px);
+}
+
+.task-card:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--primary-color-alpha, rgba(59, 130, 246, 0.3));
+  border-color: var(--primary-color);
+}
+
+.task-card:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
 }
 
 .task-row {
@@ -107,13 +118,13 @@
 }
 
 .status-todo {
-  background: var(--status-todo-bg, #e0e7ff);
-  color: var(--status-todo-color, #4338ca);
+  background: var(--status-todo-bg, #dbeafe);
+  color: var(--status-todo-color, #1e3a8a);
 }
 
 .status-in-progress {
   background: var(--status-in-progress-bg, #fef3c7);
-  color: var(--status-in-progress-color, #92400e);
+  color: var(--status-in-progress-color, #78350f);
 }
 
 .status-done {
@@ -123,12 +134,12 @@
 
 .status-cancelled {
   background: var(--status-cancelled-bg, #fee2e2);
-  color: var(--status-cancelled-color, #991b1b);
+  color: var(--status-cancelled-color, #7f1d1d);
 }
 
 .status-archived {
-  background: var(--status-archived-bg, #f3f4f6);
-  color: var(--status-archived-color, #6b7280);
+  background: var(--status-archived-bg, #e5e7eb);
+  color: var(--status-archived-color, #1f2937);
 }
 
 /* Task Content */
@@ -269,17 +280,17 @@
 
 .deadline-item.deadline-soon .date-label,
 .deadline-item.deadline-soon .date-value {
-  color: #92400e;
+  color: #78350f;
 }
 
 .deadline-item.deadline-today .date-label,
 .deadline-item.deadline-today .date-value {
-  color: #1e40af;
+  color: #1e3a8a;
 }
 
 .deadline-item.deadline-overdue .date-label,
 .deadline-item.deadline-overdue .date-value {
-  color: #991b1b;
+  color: #7f1d1d;
 }
 
 /* Actions */

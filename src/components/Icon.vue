@@ -1,7 +1,39 @@
 <script setup lang="ts">
+/**
+ * Icon Component
+ * 
+ * A reusable SVG icon component with support for multiple icon types.
+ * Provides a consistent interface for rendering inline SVG icons throughout the app.
+ * 
+ * Supported icons:
+ * - 'home': Home icon
+ * - 'list': List icon (three horizontal lines)
+ * - 'search': Search/magnifying glass icon
+ * - fallback: Circle icon for unsupported names
+ * 
+ * @component
+ * @example
+ * ```vue
+ * <Icon name="home" :size="24" className="custom-class" />
+ * <Icon name="search" />
+ * ```
+ */
+
 import { computed } from 'vue'
 
-const props = defineProps<{ name: string; size?: number; className?: string }>()
+/**
+ * Component props
+ */
+const props = defineProps<{ 
+  /** Name of the icon to display (e.g., 'home', 'list', 'search') */
+  name: string
+  /** Size of the icon in pixels (default: 18) */
+  size?: number
+  /** Additional CSS class to apply */
+  className?: string 
+}>()
+
+/** Computed icon size with default fallback to 18px */
 const size = computed(() => props.size ?? 18)
 </script>
 

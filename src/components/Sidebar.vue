@@ -100,16 +100,65 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * Sidebar Component
+ * 
+ * Main navigation sidebar with responsive design and theme switcher.
+ * Provides navigation links to all main views and theme selection functionality.
+ * 
+ * Features:
+ * - Responsive design (collapsible on desktop, overlay on mobile)
+ * - Navigation links to Home, Day Tasks, All Tasks, and Archived views
+ * - Theme switcher with 8 available themes (light, dark, halloween, christmas, france, italy, spain, lgbt)
+ * - Theme persistence in localStorage
+ * - Mobile-friendly with hamburger menu button
+ * - Click-outside-to-close for mobile overlay
+ * - Keyboard accessible navigation
+ * 
+ * @component
+ * @example
+ * ```vue
+ * <Sidebar />
+ * ```
+ */
+
 import { ref, onMounted, onUnmounted } from 'vue'
 
+// ==========================================
+// Reactive State - Sidebar & Theme
+// ==========================================
+
+/** Controls whether the sidebar is collapsed/hidden */
 const isCollapsed = ref(false)
+
+/** Determines if the viewport is in mobile mode (≤768px) */
 const isMobile = ref(false)
+
+/** List of available theme options */
 const themes = ['light','dark','halloween','christmas','france','italy','spain','lgbt']
+
+/** Current active theme */
 const currentTheme = ref('light')
+
+/** Controls visibility of the theme selection dropdown menu */
 const themeMenuOpen = ref(false)
+
+/** Reference to the theme button element for click-outside detection */
 const themeBtnRef = ref<HTMLElement | null>(null)
+
+/** Reference to the theme menu element for click-outside detection */
 const themeMenuRef = ref<HTMLElement | null>(null)
 
+// ==========================================
+// Theme Management
+// ==========================================
+
+/**
+ * Applies a theme by updating the root element's CSS class.
+ * Removes previous theme classes and persists selection to localStorage.
+ * 
+ * @param theme - Theme name to apply
+ */
 function applyTheme(theme: string) {
   const root = document.documentElement
   Array.from(root.classList).forEach(c => { if (c.startsWith('theme-')) root.classList.remove(c) })
@@ -118,9 +167,24 @@ function applyTheme(theme: string) {
   currentTheme.value = theme
 }
 
+/**
+ * Toggles the theme selection dropdown menu.
+ */
 function toggleThemeMenu() { themeMenuOpen.value = !themeMenuOpen.value }
+
+/**
+ * Selects and applies a theme, then closes the dropdown menu.
+ * 
+ * @param t - Theme name to select
+ */
 function selectTheme(t: string) { applyTheme(t); themeMenuOpen.value = false }
 
+/**
+ * Closes the theme menu when clicking outside of it.
+ * Attached to document click event on mount.
+ * 
+ * @param e - Mouse event
+ */
 function onDocClick(e: MouseEvent) {
   const btn = themeBtnRef.value
   const menu = themeMenuRef.value
@@ -129,24 +193,37 @@ function onDocClick(e: MouseEvent) {
   themeMenuOpen.value = false
 }
 
+// ==========================================
+// Responsive Behavior
+// ==========================================
+
+/**
+ * Updates the isMobile flag based on window width.
+ * Mobile mode is active when window width is ≤768px.
+ */
 function updateIsMobile() {
   isMobile.value = window.innerWidth <= 768
 }
 
+// ==========================================
+// Lifecycle Hooks
+// ==========================================
+
 onMounted(() => {
-  // theme restore
+  // Restore saved theme from localStorage
   const stored = localStorage.getItem('theme')
   if (stored && themes.includes(stored)) {
     currentTheme.value = stored
     document.documentElement.classList.add(`theme-${stored}`)
   }
 
-  // responsive setup
+  // Setup responsive behavior
   updateIsMobile()
-  // collapse by default on mobile
+  // Collapse sidebar by default on mobile devices
   isCollapsed.value = isMobile.value ? true : false
   window.addEventListener('resize', updateIsMobile)
 
+  // Setup click-outside detection for theme menu
   document.addEventListener('click', onDocClick)
 })
 

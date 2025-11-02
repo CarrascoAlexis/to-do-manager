@@ -1,61 +1,25 @@
 <script setup lang="ts">
-// AllTasks view
-// Shows every task in the system (includes archived and cancelled items).
-// Reuses the same layout as Home so the format remains consistent.
-
-import { ref, watch, onMounted, onUnmounted } from 'vue'
-import type { Task } from '@/resources/tasks'
-import { loadTasks, saveAllTasks, Status } from '@/resources/tasks'
+/**
+ * AllTasks View
+ * Shows all tasks in the system (including archived and cancelled)
+ */
+import { ref, computed } from 'vue'
+import type { Task } from '@/composables/tasks'
+import { loadTasks } from '@/composables/tasks'
 import TaskCard from '@/components/TaskCard.vue'
 import TaskModal from '@/components/TaskModal.vue'
 import HeaderSection from '@/components/HeaderSection.vue'
 import KanbanBoard from '@/components/KanbanBoard.vue'
+import { useTaskManagement } from '@/composables/useTaskManagement'
+import { useHeaderControls } from '@/composables/useHeaderControls'
 
 const tasks = ref<Task[]>([])
-const selectedTask = ref<Task | null>(null)
-const isModalOpen = ref(false)
-const selectedIsEdit = ref(false)
 
-const filter = ref<{ searchTerm?: string; status?: number }>({})
-const activeFilter = ref<number | 'all'>('all')
-
-// Sorting controls
-const sortBy = ref<'deadline' | 'createdAt' | 'updatedAt'>('deadline')
-const sortOrder = ref<'asc' | 'desc'>('asc')
-const view = ref<'list' | 'kanban'>('list')
-const dateFilter = ref<'all' | 'overdue' | 'today' | 'soon' | 'future'>('all')
-const filterAnim = ref(false)
-
-import { computed } from 'vue'
-
-const kanbanTasks = computed(() => {
-  if (view.value !== 'kanban') return tasks.value
-  const all = loadTasks()
-  if (dateFilter.value === 'all') return all
-  const now = new Date(); now.setHours(0,0,0,0)
-  return all.filter(t => {
-    if (!t.deadline) return false
-    const dd = new Date(t.deadline); dd.setHours(0,0,0,0)
-    const diff = Math.ceil((dd.getTime() - now.getTime()) / (1000*60*60*24))
-    if (dateFilter.value === 'overdue') return diff < 0
-    if (dateFilter.value === 'today') return diff === 0
-    if (dateFilter.value === 'soon') return diff > 0 && diff <= 3
-    if (dateFilter.value === 'future') return diff > 3
-    return true
-  })
-})
-
-const getTimeValue = (task: Task) => {
-  const value = (task as any)[sortBy.value] as Date | undefined
-  if (!value) return sortBy.value === 'deadline' ? Infinity : 0
-  return value.getTime()
-}
-
+// Load and filter tasks
 const loadTasksData = () => {
   const all = loadTasks()
-
-  // Apply search filter
   const q = filter.value.searchTerm ? filter.value.searchTerm.trim().toLowerCase() : ''
+  
   let filtered = all.filter(t => {
     const matchesSearch = q
       ? (t.title.toLowerCase().includes(q) || (t.description ? t.description.toLowerCase().includes(q) : false))
@@ -64,7 +28,13 @@ const loadTasksData = () => {
     return matchesSearch && matchesStatus
   })
 
-  // Sort
+  // Apply sorting
+  const getTimeValue = (task: Task) => {
+    const value = (task as any)[sortBy.value] as Date | undefined
+    if (!value) return sortBy.value === 'deadline' ? Infinity : 0
+    return value.getTime()
+  }
+
   filtered.sort((a, b) => {
     const ta = getTimeValue(a)
     const tb = getTimeValue(b)
@@ -75,119 +45,57 @@ const loadTasksData = () => {
   tasks.value = filtered
 }
 
-watch([sortBy, sortOrder], () => {
-  loadTasksData()
-})
+// Use composables for shared logic
+const {
+  selectedTask,
+  isModalOpen,
+  selectedIsEdit,
+  handleTaskClick,
+  openEditModal,
+  handleCloseModal,
+  handleTaskEdit,
+  handleTaskDelete,
+  handleStatusChange
+} = useTaskManagement(loadTasksData)
 
-function setStatusFilter(status: number | 'all') {
-  activeFilter.value = status
-  if (status === 'all') {
-    filter.value = {}
-  } else {
-    filter.value = { status }
-  }
-  loadTasksData()
-}
+const {
+  filter,
+  activeFilter,
+  sortBy,
+  sortOrder,
+  view,
+  dateFilter,
+  filterAnim,
+  onUpdateSearch,
+  onUpdateActiveFilter,
+  onUpdateSortBy,
+  onUpdateSortOrder,
+  onUpdateView,
+  onUpdateDateFilter
+} = useHeaderControls(loadTasksData)
 
-onMounted(() => {
-  // load saved view preference
-  try {
-    const saved = localStorage.getItem('tasks:viewMode')
-    if (saved === 'kanban' || saved === 'list') view.value = saved
-    const savedDate = localStorage.getItem('tasks:dateFilter')
-    if (savedDate === 'all' || savedDate === 'overdue' || savedDate === 'today' || savedDate === 'soon' || savedDate === 'future') {
-      dateFilter.value = savedDate as any
-    }
-  } catch (err) { /* ignore */ }
-  loadTasksData()
-  window.addEventListener('tasks-updated', loadTasksData)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('tasks-updated', loadTasksData)
-})
-
-function handleTaskClick(task: Task) {
-  selectedTask.value = task
-  isModalOpen.value = true
-}
-
-function openEditModal(task: Task) {
-  selectedTask.value = task
-  isModalOpen.value = true
-  selectedIsEdit.value = true
-}
-
-function handleCloseModal() {
-  isModalOpen.value = false
-  selectedIsEdit.value = false
-  setTimeout(() => { selectedTask.value = null }, 300)
-}
-
-function handleTaskEdit(task: Task) {
-  const idx = tasks.value.findIndex(t => t.id === task.id)
-  if (idx !== -1) {
-    tasks.value[idx] = { ...tasks.value[idx], ...task, updatedAt: new Date() }
-    // persist: load full list, replace item and save all
-    const all = loadTasks()
-    const ai = all.findIndex(a => a.id === task.id)
-    if (ai !== -1) {
-      all[ai] = { ...all[ai], ...task, updatedAt: new Date() }
-      saveAllTasks(all)
-    }
-    loadTasksData()
-  }
-  handleCloseModal()
-}
-
-function handleTaskDelete(task: Task) {
+// Kanban view filtering
+const kanbanTasks = computed(() => {
+  if (view.value !== 'kanban') return tasks.value
   const all = loadTasks()
-  const updated = all.filter(t => t.id !== task.id)
-  saveAllTasks(updated)
-  loadTasksData()
-  handleCloseModal()
-}
+  if (dateFilter.value === 'all') return all
+  const now = new Date()
+  now.setHours(0, 0, 0, 0)
+  return all.filter(t => {
+    if (!t.deadline) return false
+    const dd = new Date(t.deadline)
+    dd.setHours(0, 0, 0, 0)
+    const diff = Math.ceil((dd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    if (dateFilter.value === 'overdue') return diff < 0
+    if (dateFilter.value === 'today') return diff === 0
+    if (dateFilter.value === 'soon') return diff > 0 && diff <= 3
+    if (dateFilter.value === 'future') return diff > 3
+    return true
+  })
+})
 
-function handleStatusChange(task: Task, newStatus: number) {
-  const all = loadTasks()
-  const toUpdate = all.find(t => t.id === task.id)
-  if (toUpdate) {
-    toUpdate.status = newStatus
-    toUpdate.updatedAt = new Date()
-    saveAllTasks(all)
-    loadTasksData()
-  }
-}
-
-function onUpdateSearch(v: string) {
-  filter.value = { ...(filter.value || {}), searchTerm: v }
-  loadTasksData()
-}
-
-function onUpdateActiveFilter(v: number | 'all') {
-  activeFilter.value = v
-  setStatusFilter(v)
-}
-
-function onUpdateSortBy(v: 'deadline' | 'createdAt' | 'updatedAt') {
-  sortBy.value = v
-}
-
-function onUpdateSortOrder(v: 'asc' | 'desc') {
-  sortOrder.value = v
-}
-
-function onUpdateView(v: 'list' | 'kanban') {
-  view.value = v
-  try { localStorage.setItem('tasks:viewMode', v) } catch (err) { /* ignore */ }
-}
-
-function onUpdateDateFilter(v: 'all' | 'overdue' | 'today' | 'soon' | 'future') {
-  dateFilter.value = v
-  try { localStorage.setItem('tasks:dateFilter', v) } catch (err) { /* ignore */ }
-  filterAnim.value = true
-  setTimeout(() => { filterAnim.value = false }, 600)
-}
+// Initial load
+loadTasksData()
 </script>
 
 <template>

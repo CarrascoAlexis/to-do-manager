@@ -1,25 +1,91 @@
 <script setup lang="ts">
-import type { Task } from '@/resources/tasks'
-import { Status, loadTasks, saveAllTasks } from '@/resources/tasks'
+/**
+ * KanbanBoard Component
+ * 
+ * Displays tasks in a Kanban board layout with drag-and-drop functionality.
+ * Tasks are organized into columns by status (To Do, In Progress, Done, Cancelled, Archived).
+ * Users can drag tasks between columns to update their status.
+ * 
+ * Features:
+ * - Drag-and-drop task movement between status columns
+ * - Visual feedback for drag operations (ghost class, drop highlight)
+ * - Optimistic UI updates for smooth user experience
+ * - Automatic persistence to local storage
+ * - Custom event dispatch to notify other components
+ * - Compact card display optimized for kanban view
+ * 
+ * Uses sortablejs library for drag-and-drop functionality.
+ * 
+ * @component
+ * @example
+ * ```vue
+ * <KanbanBoard
+ *   :tasks="filteredTasks"
+ *   :showDescription="false"
+ *   @click="handleTaskClick"
+ *   @edit="handleTaskEdit"
+ *   @delete="handleTaskDelete"
+ *   @status-change="handleStatusChange"
+ * />
+ * ```
+ */
+
+import type { Task } from '@/composables/tasks'
+import { Status, loadTasks, saveAllTasks } from '@/composables/tasks'
 import { computed, defineProps, defineEmits, onMounted, onBeforeUnmount, nextTick, ref, watch } from 'vue'
 import Sortable from 'sortablejs'
 import TaskCard from './TaskCard.vue'
 
+/**
+ * Component props
+ */
 const props = defineProps({
+  /** Array of tasks to display in the kanban board */
   tasks: { type: Array as () => Task[], default: () => [] },
+  /** Whether to show task descriptions in cards (typically false for compact kanban view) */
   showDescription: { type: Boolean, default: true }
 })
 
+/**
+ * Component events
+ * 
+ * @event click - Emitted when a task card is clicked
+ * @event edit - Emitted when a task is edited
+ * @event delete - Emitted when a task is deleted
+ * @event status-change - Emitted when a task's status is changed via drag-and-drop
+ */
 const emit = defineEmits(['click', 'edit', 'delete', 'status-change'])
 
-// local copy of tasks so we can update the UI optimistically when a drop happens
+// ==========================================
+// Reactive State - Task Management
+// ==========================================
+
+/**
+ * Local copy of tasks for optimistic UI updates.
+ * When a task is dragged and dropped, this local copy is updated immediately
+ * for a smooth user experience, while persistence happens asynchronously.
+ */
 const localTasks = ref<Task[]>((props.tasks || []).slice())
 
+/**
+ * Watches for changes to the tasks prop and syncs them to the local copy.
+ * Ensures the component stays in sync with parent data updates.
+ */
 watch(() => props.tasks, (v) => {
   // sync incoming prop changes into local copy
   localTasks.value = (v || []).slice()
 })
 
+// ==========================================
+// Computed Properties - Column Layout
+// ==========================================
+
+/**
+ * Computes the kanban columns with their respective tasks.
+ * Each column represents a task status and contains filtered tasks.
+ * 
+ * @returns Array of column objects with key, label, and tasks
+ */
 const columns = computed(() => {
   // Define columns in the common Kanban order
   const cols = [
@@ -36,17 +102,46 @@ const columns = computed(() => {
   }))
 })
 
-// Hold references to each column's DOM node and Sortable instance
+// ==========================================
+// Drag-and-Drop State
+// ==========================================
+
+/** Holds DOM references to each column body element for Sortable initialization */
 const columnNodes = ref(new Map<number, HTMLElement>())
+
+/** Stores Sortable.js instances for each column */
 const sortableInstances = ref(new Map<number, any>())
 
+// ==========================================
+// Event Handlers - Task Actions
+// ==========================================
+
+/** Emits click event when a task card is clicked */
 function onCardClick(task: Task) { emit('click', task) }
+
+/** Emits edit event when a task is edited */
 function onCardEdit(task: Task) { emit('edit', task) }
+
+/** Emits delete event when a task is deleted */
 function onCardDelete(task: Task) { emit('delete', task) }
+
+/** Emits status-change event when a task's status is changed */
 function onStatusChange(task: Task, status: number) { emit('status-change', task, status) }
 
+// ==========================================
+// Drag-and-Drop Setup
+// ==========================================
+
+/**
+ * Initializes Sortable.js for a kanban column to enable drag-and-drop.
+ * Handles task movement between columns and updates task status accordingly.
+ * Provides visual feedback and persists changes to local storage.
+ * 
+ * @param colKey - The status key for the column
+ * @param node - The DOM element for the column body
+ */
 function setupSortableForColumn(colKey: number, node: HTMLElement) {
-  // Create a Sortable instance that allows moving between columns.
+  // Create a Sortable instance that allows moving between columns
   const instance = new Sortable(node, {
     group: { name: 'kanban', pull: true, put: true },
     animation: 150,

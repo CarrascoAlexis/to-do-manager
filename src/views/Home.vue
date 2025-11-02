@@ -1,51 +1,66 @@
 ﻿<script setup lang="ts">
-// Home view
-// This view shows the main task list for the user (Home). It wires
-// header controls (search, status filter, sorting) to local state and
-// loads tasks using `loadTasksForHome`. Clicking a task opens the
-// `TaskModal` for viewing (or editing via modal actions).
-//
-// Key bindings:
-// - handleTaskClick(task) -> open modal for task
-// - openEditModal(task) -> open modal pre-filled for editing
-// - handleTaskEdit(task) -> save edited task back to storage
-// - header emits update:search / update:activeFilter / update:sortBy / update:sortOrder
-import { ref, watch, onMounted, onUnmounted, computed } from 'vue'
-import type { Task } from '@/resources/tasks'
-import { loadTasksForHome, saveAllTasks, loadTasks } from '@/resources/tasks'
+/**
+ * Home View
+ * Main task list view with filtering, sorting, and view mode controls
+ */
+import { ref, computed } from 'vue'
+import type { Task } from '@/composables/tasks'
+import { loadTasksForHome, loadTasks } from '@/composables/tasks'
 import TaskCard from '@/components/TaskCard.vue'
 import TaskModal from '@/components/TaskModal.vue'
 import HeaderSection from '@/components/HeaderSection.vue'
 import KanbanBoard from '@/components/KanbanBoard.vue'
+import { useTaskManagement } from '@/composables/useTaskManagement'
+import { useHeaderControls } from '@/composables/useHeaderControls'
 
 const tasks = ref<Task[]>([])
-const selectedTask = ref<Task | null>(null)
-const isModalOpen = ref(false)
-const selectedIsEdit = ref(false)
 
-const filter = ref<{ searchTerm?: string; status?: number }>({})
-const activeFilter = ref<number | 'all'>('all')
-
-// Sorting controls
-const sortBy = ref<'deadline' | 'createdAt' | 'updatedAt'>('deadline')
-const sortOrder = ref<'asc' | 'desc'>('asc')
-const view = ref<'list' | 'kanban'>('list')
-const dateFilter = ref<'all' | 'overdue' | 'today' | 'soon' | 'future'>('all')
-const filterAnim = ref(false)
-
+// Load tasks data
 const loadTasksData = () => {
   tasks.value = loadTasksForHome(filter.value, sortBy.value, sortOrder.value)
 }
 
+// Use composables for shared logic
+const {
+  selectedTask,
+  isModalOpen,
+  selectedIsEdit,
+  handleTaskClick,
+  openEditModal,
+  handleCloseModal,
+  handleTaskEdit,
+  handleTaskDelete,
+  handleStatusChange
+} = useTaskManagement(loadTasksData)
+
+const {
+  filter,
+  activeFilter,
+  sortBy,
+  sortOrder,
+  view,
+  dateFilter,
+  filterAnim,
+  onUpdateSearch,
+  onUpdateActiveFilter,
+  onUpdateSortBy,
+  onUpdateSortOrder,
+  onUpdateView,
+  onUpdateDateFilter
+} = useHeaderControls(loadTasksData)
+
+// Kanban view filtering
 const kanbanTasks = computed(() => {
   if (view.value !== 'kanban') return tasks.value
   const all = loadTasks()
   if (dateFilter.value === 'all') return all
-  const now = new Date(); now.setHours(0,0,0,0)
+  const now = new Date()
+  now.setHours(0, 0, 0, 0)
   return all.filter(t => {
     if (!t.deadline) return false
-    const dd = new Date(t.deadline); dd.setHours(0,0,0,0)
-    const diff = Math.ceil((dd.getTime() - now.getTime()) / (1000*60*60*24))
+    const dd = new Date(t.deadline)
+    dd.setHours(0, 0, 0, 0)
+    const diff = Math.ceil((dd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
     if (dateFilter.value === 'overdue') return diff < 0
     if (dateFilter.value === 'today') return diff === 0
     if (dateFilter.value === 'soon') return diff > 0 && diff <= 3
@@ -54,129 +69,8 @@ const kanbanTasks = computed(() => {
   })
 })
 
-// Auto-apply sorting when control values change
-watch([sortBy, sortOrder], () => {
-  loadTasksData()
-})
-
-const setStatusFilter = (status: number | 'all') => {
-  activeFilter.value = status
-  if (status === 'all') {
-    filter.value = {}
-  } else {
-    filter.value = { status }
-  }
-  loadTasksData()
-}
-
+// Initial load
 loadTasksData()
-
-onMounted(() => {
-  // load saved view preference from localStorage
-  try {
-    const saved = localStorage.getItem('tasks:viewMode')
-    if (saved === 'kanban' || saved === 'list') view.value = saved
-    const savedDate = localStorage.getItem('tasks:dateFilter')
-    if (savedDate === 'all' || savedDate === 'overdue' || savedDate === 'today' || savedDate === 'soon' || savedDate === 'future') {
-      dateFilter.value = savedDate as any
-    }
-  } catch (err) { /* ignore */ }
-  window.addEventListener('tasks-updated', loadTasksData)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('tasks-updated', loadTasksData)
-})
-
-// Event handlers
-function handleTaskClick(task: Task) {
-  selectedTask.value = task
-  isModalOpen.value = true
-}
-
-function openEditModal(task: Task) {
-  // Open the modal pre-filled for editing when the card's Edit button is clicked
-  selectedTask.value = task
-  isModalOpen.value = true
-  selectedIsEdit.value = true
-}
-
-function handleCloseModal() {
-  isModalOpen.value = false
-  selectedIsEdit.value = false
-  setTimeout(() => {
-    selectedTask.value = null
-  }, 300) // Wait for animation to finish
-}
-
-function handleTaskEdit(task: Task) {
-  // Save edited task back to storage and refresh list
-  console.log('Save edited task:', task)
-  const idx = tasks.value.findIndex(t => t.id === task.id)
-  if (idx !== -1) {
-    tasks.value[idx] = { ...tasks.value[idx], ...task, updatedAt: new Date() }
-    saveAllTasks(tasks.value)
-    loadTasksData()
-  }
-  handleCloseModal()
-}
-
-function handleTaskDelete(task: Task) {
-  console.log('Delete task:', task)
-  // Ensure we remove the task from the full stored task list (not only the currently-visible filtered list)
-  const all = loadTasks()
-  const updatedTasks = all.filter(t => t.id !== task.id)
-  saveAllTasks(updatedTasks)
-  loadTasksData()
-  handleCloseModal()
-}
-
-function handleStatusChange(task: Task, newStatus: number) {
-  console.log('Status change:', task, newStatus)
-  const taskToUpdate = tasks.value.find(t => t.id === task.id)
-  if (taskToUpdate) {
-    taskToUpdate.status = newStatus
-    taskToUpdate.updatedAt = new Date()
-    saveAllTasks(tasks.value)
-    loadTasksData()
-  }
-}
-
-// typed handlers for header control events (avoid implicit any in templates)
-function onUpdateSearch(v: string) {
-  // ensure filter.value exists and update searchTerm
-  filter.value = { ...(filter.value || {}), searchTerm: v }
-  // reload tasks immediately when search changes
-  loadTasksData()
-}
-
-function onUpdateActiveFilter(v: number | 'all') {
-  activeFilter.value = v
-  setStatusFilter(v)
-}
-
-function onUpdateSortBy(v: 'deadline' | 'createdAt' | 'updatedAt') {
-  sortBy.value = v
-  // watch on [sortBy, sortOrder] will reload
-}
-
-function onUpdateSortOrder(v: 'asc' | 'desc') {
-  sortOrder.value = v
-  // watch on [sortBy, sortOrder] will reload
-}
-
-function onUpdateView(v: 'list' | 'kanban') {
-  view.value = v
-  try { localStorage.setItem('tasks:viewMode', v) } catch (err) { /* ignore */ }
-}
-
-function onUpdateDateFilter(v: 'all' | 'overdue' | 'today' | 'soon' | 'future') {
-  dateFilter.value = v
-  try { localStorage.setItem('tasks:dateFilter', v) } catch (err) { /* ignore */ }
-  // trigger a brief animation on the list to indicate the filter was applied
-  filterAnim.value = true
-  setTimeout(() => { filterAnim.value = false }, 600)
-}
 </script>
 
 <template>
